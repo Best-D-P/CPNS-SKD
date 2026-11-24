@@ -281,7 +281,7 @@ function renderDashboardTable() {
 
   if (rowsToDisplay.length === 0) {
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td colspan="9" class="py-6 px-4 text-center text-slate-500">Belum ada data skor peserta yang sesuai filter.</td>`;
+    tr.innerHTML = `<td colspan="10" class="py-6 px-4 text-center text-slate-500">Belum ada data skor peserta yang sesuai filter.</td>`;
     tbody.appendChild(tr);
     return;
   }
@@ -301,10 +301,8 @@ function renderDashboardTable() {
     tr.innerHTML = `
       <td class="py-2.5 px-3 font-semibold text-slate-500">${rankNum}</td>
       <td class="py-2.5 px-3 font-bold text-slate-800">${escapeHtml(rec.nama)}${rankBadge}</td>
-      <td class="py-2.5 px-3 text-slate-600">
-        <div class="font-medium text-slate-800">${escapeHtml(rec.formasi)}</div>
-        <div class="text-xs text-slate-500">${escapeHtml(rec.instansi)}</div>
-      </td>
+      <td class="py-2.5 px-3 font-medium text-slate-800">${escapeHtml(rec.formasi)}</td>
+      <td class="py-2.5 px-3 text-slate-600">${escapeHtml(rec.instansi)}</td>
       <td class="py-2.5 px-3 text-center font-semibold">${rec.twk}</td>
       <td class="py-2.5 px-3 text-center font-semibold">${rec.tiu}</td>
       <td class="py-2.5 px-3 text-center font-semibold">${rec.tkp}</td>
