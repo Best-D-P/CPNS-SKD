@@ -39,7 +39,7 @@
        ===================================================================== -->
   <script>
     const GOOGLE_SCRIPT_URL =
-      "https://script.google.com/macros/s/AKfycbwgM3G6dFFB-bPSjWRJl5zjReq8-kk8V5V4CSsl2ayx8ix_Hi3b9Qg93o6_cVcs48ht4A/exec";
+      "https://script.google.com/macros/s/AKfycbzIEgQzS-3cMBoUECezwE8Re-5VYd8EhWhQUBdxY3gP7VZO4YA00qcnF_BE0a3lxEE49Q/exec";
     const SESSION_STORAGE_KEY = "cat_skd_active_session_v1";
     const AUTH_STORAGE_KEY = "cat_skd_logged_user_v1";
     const USERS_STORAGE_KEY = "cat_skd_registered_users_v1";
@@ -57,6 +57,7 @@
         </div>
       </div>
 
+      <!-- Tombol Navigasi Non-Ujian -->
       <div id="navHeaderControls" class="flex items-center gap-2">
         <button onclick="showScreen('setup')" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-100 text-xs font-semibold px-3 py-2 rounded-lg transition">
           Beranda Ujian
@@ -69,6 +70,7 @@
         </button>
       </div>
 
+      <!-- Kontrol Saat Ujian Berlangsung -->
       <div id="examHeaderControls" class="hidden items-center gap-3">
         <div class="hidden sm:block text-right">
           <div id="headerParticipantName" class="text-xs font-semibold text-slate-200"></div>
@@ -94,16 +96,16 @@
         </span>
         <h2 class="text-2xl sm:text-3xl font-extrabold mb-2">Computer Assisted Test (CAT) SKD CPNS</h2>
         <p class="text-sm text-blue-100 max-w-2xl">
-          Daftar akun unik tersinkron ke Google Sheets, login berulang kapan saja, reset password jika lupa menggunakan kode pemulihan, dan pantau riwayat ujian serta seluruh skor peserta.
+          Daftar akun unik tersinkron ke Google Sheets, login berulang kapan saja, reset password via kode email, dan pantau riwayat ujian serta seluruh skor peserta.
         </p>
       </div>
 
-      <!-- Panel Akun: Daftar / Login / Reset Password -->
+      <!-- Panel Akun: Daftar / Login / Reset Password via Email -->
       <div id="authCard" class="p-6 sm:p-8 border-b border-slate-200 bg-slate-50/70">
         <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div>
-            <h3 class="text-base font-extrabold text-slate-800">Akun Peserta Unik (Google Sheets)</h3>
-            <p class="text-xs text-slate-500">Akun tersimpan di tab <strong>AkunPeserta</strong> sehingga bisa login lintas perangkat dan reset password jika lupa.</p>
+            <h3 class="text-base font-extrabold text-slate-800">Akun Peserta Unik (Reset via Email)</h3>
+            <p class="text-xs text-slate-500">Daftar dengan email aktif agar kode reset password dapat dikirim langsung ke email Anda.</p>
           </div>
           <div class="flex items-center gap-2">
             <span id="activeSessionBadge" class="hidden text-xs font-bold bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full"></span>
@@ -121,12 +123,13 @@
           </div>
         </div>
 
+        <!-- Form Login -->
         <div id="loginModePanel" class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
           <div>
             <label for="loginUsernameInput" class="block text-xs font-bold text-slate-700 mb-1.5">
-              Nama Akun Unik <span class="text-rose-600">*</span>
+              Nama Akun atau Email <span class="text-rose-600">*</span>
             </label>
-            <input type="text" id="loginUsernameInput" placeholder="Masukkan nama akun Anda..."
+            <input type="text" id="loginUsernameInput" placeholder="Nama akun atau email terdaftar..."
               class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" />
           </div>
           <div>
@@ -143,26 +146,27 @@
           </div>
         </div>
 
+        <!-- Form Daftar Akun Baru -->
         <div id="registerModePanel" class="hidden grid-cols-1 sm:grid-cols-4 gap-4 items-end">
           <div>
             <label for="regUsernameInput" class="block text-xs font-bold text-slate-700 mb-1.5">
               Nama Akun Unik <span class="text-rose-600">*</span>
             </label>
-            <input type="text" id="regUsernameInput" placeholder="Contoh: Best D Pamungkas"
+            <input type="text" id="regUsernameInput" placeholder="Contoh: Budiman Putra"
+              class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" />
+          </div>
+          <div>
+            <label for="regEmailInput" class="block text-xs font-bold text-slate-700 mb-1.5">
+              Email Aktif <span class="text-rose-600">*</span>
+            </label>
+            <input type="email" id="regEmailInput" placeholder="nama@email.com"
               class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" />
           </div>
           <div>
             <label for="regPasswordInput" class="block text-xs font-bold text-slate-700 mb-1.5">
-              Buat Password (Min. 4) <span class="text-rose-600">*</span>
+              Password (Min. 4) <span class="text-rose-600">*</span>
             </label>
             <input type="password" id="regPasswordInput" placeholder="Minimal 4 karakter"
-              class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" />
-          </div>
-          <div>
-            <label for="regRecoveryInput" class="block text-xs font-bold text-slate-700 mb-1.5">
-              Kode Pemulihan (Min. 4) <span class="text-rose-600">*</span>
-            </label>
-            <input type="text" id="regRecoveryInput" placeholder="Untuk reset jika lupa"
               class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" />
           </div>
           <div>
@@ -172,38 +176,50 @@
           </div>
         </div>
 
-        <div id="resetModePanel" class="hidden grid-cols-1 sm:grid-cols-4 gap-4 items-end">
-          <div>
-            <label for="resetUsernameInput" class="block text-xs font-bold text-slate-700 mb-1.5">
-              Nama Akun Terdaftar <span class="text-rose-600">*</span>
-            </label>
-            <input type="text" id="resetUsernameInput" placeholder="Nama akun Anda..."
-              class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" />
+        <!-- Form Reset Password via Email -->
+        <div id="resetModePanel" class="hidden space-y-3">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+            <div class="sm:col-span-2">
+              <label for="resetEmailInput" class="block text-xs font-bold text-slate-700 mb-1.5">
+                Email Terdaftar <span class="text-rose-600">*</span>
+              </label>
+              <input type="email" id="resetEmailInput" placeholder="Masukkan email saat pendaftaran..."
+                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" />
+            </div>
+            <div>
+              <button type="button" id="sendResetOtpBtn" onclick="handleRequestResetOtp()" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition">
+                Kirim Kode ke Email
+              </button>
+            </div>
           </div>
-          <div>
-            <label for="resetRecoveryInput" class="block text-xs font-bold text-slate-700 mb-1.5">
-              Kode Pemulihan <span class="text-rose-600">*</span>
-            </label>
-            <input type="text" id="resetRecoveryInput" placeholder="Kode saat pendaftaran"
-              class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" />
-          </div>
-          <div>
-            <label for="resetNewPasswordInput" class="block text-xs font-bold text-slate-700 mb-1.5">
-              Password Baru (Min. 4) <span class="text-rose-600">*</span>
-            </label>
-            <input type="password" id="resetNewPasswordInput" placeholder="Password pengganti"
-              class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" />
-          </div>
-          <div>
-            <button type="button" onclick="handleResetPasswordSubmit()" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition">
-              Simpan Password Baru
-            </button>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end pt-2 border-t border-slate-200">
+            <div>
+              <label for="resetOtpInput" class="block text-xs font-bold text-slate-700 mb-1.5">
+                Kode 6 Digit dari Email <span class="text-rose-600">*</span>
+              </label>
+              <input type="text" id="resetOtpInput" maxlength="6" placeholder="Contoh: 482910"
+                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" />
+            </div>
+            <div>
+              <label for="resetNewPasswordInput" class="block text-xs font-bold text-slate-700 mb-1.5">
+                Password Baru (Min. 4) <span class="text-rose-600">*</span>
+              </label>
+              <input type="password" id="resetNewPasswordInput" placeholder="Password pengganti"
+                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" />
+            </div>
+            <div>
+              <button type="button" onclick="handleConfirmResetOtp()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition">
+                Verifikasi & Ubah Password
+              </button>
+            </div>
           </div>
         </div>
 
         <p id="authFeedbackText" class="hidden text-xs font-semibold mt-2.5"></p>
       </div>
 
+      <!-- Form Konfigurasi Ujian -->
       <div class="p-6 sm:p-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div class="lg:col-span-2 space-y-5">
           <div>
@@ -264,6 +280,7 @@
           </div>
         </div>
 
+        <!-- Panel Ketentuan BKN -->
         <div class="bg-slate-50 rounded-xl p-5 border border-slate-200 space-y-4">
           <h3 class="font-bold text-sm text-slate-800 border-b border-slate-200 pb-2">Ketentuan Nilai Ambang Batas (BKN)</h3>
           <div class="space-y-2.5 text-xs">
@@ -925,6 +942,10 @@
       return String(rawName || "").trim().replace(/\s+/g, " ").toLowerCase();
     }
 
+    function isValidEmailAddress(email) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(email || "").trim());
+    }
+
     async function hashSecretValue(value) {
       const clean = String(value || "");
       if (window.crypto && window.crypto.subtle && window.TextEncoder) {
@@ -979,7 +1000,6 @@
       regPanel.classList.toggle("hidden", mode !== "register");
       regPanel.classList.toggle("grid", mode === "register");
       resetPanel.classList.toggle("hidden", mode !== "reset");
-      resetPanel.classList.toggle("grid", mode === "reset");
 
       const activeCls = "px-3 py-1.5 rounded-lg bg-white text-slate-900 shadow-sm";
       const idleCls = "px-3 py-1.5 rounded-lg text-slate-700";
@@ -1005,8 +1025,8 @@
 
     async function handleRegisterSubmit() {
       const rawName = document.getElementById("regUsernameInput").value.trim();
+      const emailVal = document.getElementById("regEmailInput").value.trim().toLowerCase();
       const passVal = document.getElementById("regPasswordInput").value;
-      const recVal = document.getElementById("regRecoveryInput").value.trim();
 
       if (!rawName || rawName.length < 3) {
         showAuthFeedback("Nama akun minimal 3 karakter.", true);
@@ -1016,82 +1036,79 @@
         showAuthFeedback("Nama akun mengandung kata tidak sopan.", true);
         return;
       }
-      if (!passVal || passVal.length < 4) {
-        showAuthFeedback("Password minimal 4 karakter.", true);
+      if (!isValidEmailAddress(emailVal)) {
+        showAuthFeedback("Masukkan alamat email yang valid.", true);
         return;
       }
-      if (!recVal || recVal.length < 4) {
-        showAuthFeedback("Kode pemulihan minimal 4 karakter (diperlukan jika lupa password).", true);
+      if (!passVal || passVal.length < 4) {
+        showAuthFeedback("Password minimal 4 karakter.", true);
         return;
       }
 
       const key = normalizeAccountKey(rawName);
       const users = getRegisteredUsers();
-      if (users.some(u => normalizeAccountKey(u.nama) === key)) {
-        showAuthFeedback(`Nama akun "${rawName}" sudah terdaftar. Silakan login atau gunakan nama akun unik lain.`, true);
+      if (users.some(u => normalizeAccountKey(u.nama) === key || String(u.email || "").toLowerCase() === emailVal)) {
+        showAuthFeedback("Nama akun atau email sudah terdaftar. Silakan login atau gunakan isian unik lain.", true);
         return;
       }
 
       const passwordHash = await hashSecretValue(passVal);
-      const recoveryHash = await hashSecretValue(normalizeAccountKey(recVal));
 
       try {
         const remote = await postAuthToSheet({
           action: "register",
           nama: rawName,
           nama_key: key,
-          password_hash: passwordHash,
-          recovery_hash: recoveryHash
+          email: emailVal,
+          password_hash: passwordHash
         });
         if (remote && remote.status === "error") {
           showAuthFeedback(remote.pesan || "Gagal mendaftarkan akun di Google Sheets.", true);
           return;
         }
       } catch (err) {
-        console.warn("Sinkronisasi daftar akun ke Sheet gagal, menyimpan cadangan lokal.", err);
+        console.warn("Sinkronisasi daftar akun ke Sheet gagal.", err);
       }
 
       users.push({
         id: `usr_${Date.now()}`,
         nama: rawName,
+        email: emailVal,
         passwordHash,
-        recoveryHash,
         createdAt: new Date().toISOString()
       });
       saveRegisteredUsers(users);
 
-      loggedUser = { nama: rawName };
+      loggedUser = { nama: rawName, email: emailVal };
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(loggedUser));
       document.getElementById("participantNameInput").value = rawName;
       document.getElementById("regPasswordInput").value = "";
-      document.getElementById("regRecoveryInput").value = "";
 
       applyLoggedUserToUI();
       renderAttemptHistory();
-      showAuthFeedback(`Akun unik "${rawName}" berhasil didaftarkan dan tersinkron ke Google Sheets.`);
+      showAuthFeedback(`Akun "${rawName}" (${emailVal}) berhasil didaftarkan.`);
     }
 
     async function handleLoginSubmit() {
-      const rawName = document.getElementById("loginUsernameInput").value.trim();
+      const identifier = document.getElementById("loginUsernameInput").value.trim().toLowerCase();
       const passVal = document.getElementById("loginPasswordInput").value;
 
-      if (!rawName || !passVal) {
-        showAuthFeedback("Masukkan nama akun dan password.", true);
+      if (!identifier || !passVal) {
+        showAuthFeedback("Masukkan nama akun/email dan password.", true);
         return;
       }
 
-      const key = normalizeAccountKey(rawName);
-      const inputHash = await hashSecretValue(passVal);
+      const passwordHash = await hashSecretValue(passVal);
 
       try {
         const remote = await postAuthToSheet({
           action: "login",
-          nama_key: key,
-          password_hash: inputHash
+          identifier,
+          password_hash: passwordHash
         });
         if (remote && remote.status === "sukses") {
-          const resolvedName = remote.nama || rawName;
-          loggedUser = { nama: resolvedName };
+          const resolvedName = remote.nama || identifier;
+          loggedUser = { nama: resolvedName, email: remote.email || "" };
           localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(loggedUser));
           document.getElementById("participantNameInput").value = resolvedName;
           document.getElementById("loginPasswordInput").value = "";
@@ -1101,7 +1118,7 @@
           return;
         }
         if (remote && remote.status === "error") {
-          showAuthFeedback(remote.pesan || "Nama akun atau password salah.", true);
+          showAuthFeedback(remote.pesan || "Nama akun/email atau password salah.", true);
           return;
         }
       } catch (err) {
@@ -1109,13 +1126,16 @@
       }
 
       const users = getRegisteredUsers();
-      const found = users.find(u => normalizeAccountKey(u.nama) === key);
-      if (!found || inputHash !== found.passwordHash) {
-        showAuthFeedback("Nama akun atau password salah. Gunakan tab Reset Password jika lupa.", true);
+      const found = users.find(u =>
+        normalizeAccountKey(u.nama) === identifier ||
+        String(u.email || "").toLowerCase() === identifier
+      );
+      if (!found || passwordHash !== found.passwordHash) {
+        showAuthFeedback("Nama akun/email atau password salah. Gunakan tab Reset Password jika lupa.", true);
         return;
       }
 
-      loggedUser = { nama: found.nama };
+      loggedUser = { nama: found.nama, email: found.email || "" };
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(loggedUser));
       document.getElementById("participantNameInput").value = found.nama;
       document.getElementById("loginPasswordInput").value = "";
@@ -1124,13 +1144,42 @@
       showAuthFeedback(`Selamat datang kembali, ${found.nama} (Mode Lokal).`);
     }
 
-    async function handleResetPasswordSubmit() {
-      const rawName = document.getElementById("resetUsernameInput").value.trim();
-      const recVal = document.getElementById("resetRecoveryInput").value.trim();
+    async function handleRequestResetOtp() {
+      const emailVal = document.getElementById("resetEmailInput").value.trim().toLowerCase();
+      if (!isValidEmailAddress(emailVal)) {
+        showAuthFeedback("Masukkan alamat email terdaftar yang valid.", true);
+        return;
+      }
+
+      const btn = document.getElementById("sendResetOtpBtn");
+      btn.disabled = true;
+      btn.textContent = "Mengirim...";
+
+      try {
+        const remote = await postAuthToSheet({
+          action: "request_reset_otp",
+          email: emailVal
+        });
+        if (remote && remote.status === "sukses") {
+          showAuthFeedback(remote.pesan || `Kode reset dikirim ke ${emailVal}. Cek kotak masuk atau folder Spam.`);
+        } else {
+          showAuthFeedback((remote && remote.pesan) || "Gagal mengirim kode reset ke email.", true);
+        }
+      } catch (err) {
+        showAuthFeedback("Gagal terhubung ke layanan email Apps Script. Periksa koneksi atau deployment Web App.", true);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Kirim Kode ke Email";
+      }
+    }
+
+    async function handleConfirmResetOtp() {
+      const emailVal = document.getElementById("resetEmailInput").value.trim().toLowerCase();
+      const otpVal = document.getElementById("resetOtpInput").value.trim();
       const newPassVal = document.getElementById("resetNewPasswordInput").value;
 
-      if (!rawName || !recVal || !newPassVal) {
-        showAuthFeedback("Lengkapi nama akun, kode pemulihan, dan password baru.", true);
+      if (!isValidEmailAddress(emailVal) || !otpVal || !newPassVal) {
+        showAuthFeedback("Lengkapi email, kode 6 digit dari email, dan password baru.", true);
         return;
       }
       if (newPassVal.length < 4) {
@@ -1138,54 +1187,34 @@
         return;
       }
 
-      const key = normalizeAccountKey(rawName);
-      const recHash = await hashSecretValue(normalizeAccountKey(recVal));
-      const newPassHash = await hashSecretValue(newPassVal);
-      let syncedRemote = false;
+      const newPasswordHash = await hashSecretValue(newPassVal);
 
       try {
         const remote = await postAuthToSheet({
-          action: "reset_password",
-          nama_key: key,
-          recovery_hash: recHash,
-          new_password_hash: newPassHash
+          action: "confirm_reset_otp",
+          email: emailVal,
+          otp_code: otpVal,
+          new_password_hash: newPasswordHash
         });
-        if (remote && remote.status === "error") {
-          showAuthFeedback(remote.pesan || "Gagal reset password.", true);
-          return;
-        }
         if (remote && remote.status === "sukses") {
-          syncedRemote = true;
+          const users = getRegisteredUsers();
+          const idx = users.findIndex(u => String(u.email || "").toLowerCase() === emailVal);
+          if (idx !== -1) {
+            users[idx].passwordHash = newPasswordHash;
+            saveRegisteredUsers(users);
+          }
+
+          document.getElementById("resetOtpInput").value = "";
+          document.getElementById("resetNewPasswordInput").value = "";
+          document.getElementById("loginUsernameInput").value = remote.nama || emailVal;
+          switchAuthMode("login");
+          showAuthFeedback(remote.pesan || "Password berhasil diubah. Silakan login.");
+          return;
         }
+        showAuthFeedback((remote && remote.pesan) || "Kode reset tidak valid atau kedaluwarsa.", true);
       } catch (err) {
-        console.warn("Reset password ke Sheet gagal, memeriksa cache lokal.", err);
+        showAuthFeedback("Gagal memverifikasi kode reset. Coba beberapa saat lagi.", true);
       }
-
-      const users = getRegisteredUsers();
-      const idx = users.findIndex(u => normalizeAccountKey(u.nama) === key);
-      if (!syncedRemote) {
-        if (idx === -1) {
-          showAuthFeedback("Nama akun tidak terdaftar.", true);
-          return;
-        }
-        if (recHash !== users[idx].recoveryHash) {
-          showAuthFeedback("Kode pemulihan tidak cocok dengan data pendaftaran.", true);
-          return;
-        }
-      }
-
-      if (idx !== -1) {
-        users[idx].passwordHash = newPassHash;
-        users[idx].updatedAt = new Date().toISOString();
-        saveRegisteredUsers(users);
-      }
-
-      const displayTarget = idx !== -1 ? users[idx].nama : rawName;
-      document.getElementById("resetRecoveryInput").value = "";
-      document.getElementById("resetNewPasswordInput").value = "";
-      document.getElementById("loginUsernameInput").value = displayTarget;
-      switchAuthMode("login");
-      showAuthFeedback(`Password untuk akun "${displayTarget}" berhasil direset. Silakan login dengan password baru.`);
     }
 
     // =========================================================================
@@ -1224,7 +1253,7 @@
         if (!raw) return;
         const parsed = JSON.parse(raw);
         if (parsed && parsed.nama) {
-          loggedUser = { nama: parsed.nama };
+          loggedUser = { nama: parsed.nama, email: parsed.email || "" };
           applyLoggedUserToUI();
         }
       } catch (err) {}
