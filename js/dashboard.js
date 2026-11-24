@@ -1,6 +1,32 @@
 let fullTrendSeriesMode = "ALL";
 let focusTrendSeriesMode = "ALL";
 
+function safeText(val) {
+  if (typeof escapeHtml === "function") return escapeHtml(val ?? "");
+  return String(val ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function safeAccountKey(val) {
+  if (typeof normalizeAccountKey === "function") return normalizeAccountKey(val || "");
+  return String(val || "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function getHistoryKey() {
+  return typeof HISTORY_STORAGE_KEY !== "undefined" ? HISTORY_STORAGE_KEY : "cat_skd_exam_history_v1";
+}
+
+function getBackupHistoryKey() {
+  return typeof BACKUP_HISTORY_STORAGE_KEY !== "undefined" ? BACKUP_HISTORY_STORAGE_KEY : "cat_skd_exam_history_backup_v1";
+}
+
+function getScriptEndpoint() {
+  return typeof GOOGLE_SCRIPT_URL !== "undefined" ? String(GOOGLE_SCRIPT_URL || "").trim() : "";
+}
+
 function formatShortDate(raw) {
   if (!raw) return "-";
   const d = new Date(raw);
@@ -21,7 +47,7 @@ function isFocusOrDrillMode(modeStr) {
 
 function getActiveUserFilterName() {
   if (typeof loggedUser !== "undefined" && loggedUser && loggedUser.nama) {
-    return loggedUser.nama.trim();
+    return String(loggedUser.nama).trim();
   }
   const inputVal = (document.getElementById("participantNameInput")?.value || "").trim();
   return inputVal;
@@ -29,7 +55,7 @@ function getActiveUserFilterName() {
 
 function getExamHistory() {
   try {
-    const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
+    const raw = localStorage.getItem(getHistoryKey());
     const list = raw ? JSON.parse(raw) : [];
     return Array.isArray(list) ? list : [];
   } catch (err) {
@@ -39,7 +65,7 @@ function getExamHistory() {
 
 function getBackupExamHistory() {
   try {
-    const raw = localStorage.getItem(BACKUP_HISTORY_STORAGE_KEY);
+    const raw = localStorage.getItem(getBackupHistoryKey());
     const list = raw ? JSON.parse(raw) : [];
     return Array.isArray(list) ? list : [];
   } catch (err) {
@@ -57,7 +83,7 @@ function updateRestoreHistoryButtons() {
 function saveAttemptToHistory(attemptRecord) {
   const history = getExamHistory();
   history.unshift(attemptRecord);
-  localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history.slice(0, 150)));
+  localStorage.setItem(getHistoryKey(), JSON.stringify(history.slice(0, 150)));
 }
 
 function clearLocalExamHistory() {
@@ -71,8 +97,8 @@ function clearLocalExamHistory() {
     return;
   }
 
-  localStorage.setItem(BACKUP_HISTORY_STORAGE_KEY, JSON.stringify(current.slice(0, 150)));
-  localStorage.removeItem(HISTORY_STORAGE_KEY);
+  localStorage.setItem(getBackupHistoryKey(), JSON.stringify(current.slice(0, 150)));
+  localStorage.removeItem(getHistoryKey());
 
   updateRestoreHistoryButtons();
   renderAttemptHistory();
@@ -99,8 +125,8 @@ function restoreClearedExamHistory() {
     }
   });
 
-  localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(merged.slice(0, 150)));
-  localStorage.removeItem(BACKUP_HISTORY_STORAGE_KEY);
+  localStorage.setItem(getHistoryKey(), JSON.stringify(merged.slice(0, 150)));
+  localStorage.removeItem(getBackupHistoryKey());
 
   updateRestoreHistoryButtons();
   renderAttemptHistory();
@@ -111,9 +137,35 @@ function restoreClearedExamHistory() {
 }
 
 function mapRekapRowToSession(rec, idx) {
-  const keyPart = `${normalizeAccountKey(rec.nama)}_${rec.total}_${String(rec.waktu || idx).replace(/\W+/g, "")}`;
+  const keyPart = `${safeAccountKey(rec.nama)}_${rec.total}_${String(rec.waktu || idx).replace(/\W+/g, "")}`;
   return {
-    id: `db_${keyPart}`, nama: rec.nama \vert{}\vert{} "Peserta", formasi: rec.formasi \vert{}\vert{} "-", instansi: rec.instansi \vert{}\vert{} "-", mode: rec.mode \vert{}\vert{} "Reguler", twk: Number(rec.twk \vert{}\vert{} 0), tiu: Number(rec.tiu \vert{}\vert{} 0), tkp: Number(rec.tkp \vert{}\vert{} 0), total: Number(rec.total \vert{}\vert{} 0), status_pg: rec.status_pg \vert{}\vert{} "-", warning: rec.warning \vert{}\vert{} "Normal", waktuLabel: formatShortDate(rec.waktu), questions: [], answers: [], durations: [], fromDatabase: true }; }  async function syncHistoryFromDatabaseIfEmpty() { const localHistory = getExamHistory(); if (localHistory.length > 0) return localHistory; if (!GOOGLE_SCRIPT_URL \vert{}\vert{} GOOGLE_SCRIPT_URL.includes("TEMPEL_URL")) return [];  try { const res = await fetch(`${GOOGLE_SCRIPT_URL}?mode=rekap`);
+    id: `db_${keyPart}`,
+    nama: rec.nama || "Peserta",
+    formasi: rec.formasi || "-",
+    instansi: rec.instansi || "-",
+    mode: rec.mode || "Reguler",
+    twk: Number(rec.twk || 0),
+    tiu: Number(rec.tiu || 0),
+    tkp: Number(rec.tkp || 0),
+    total: Number(rec.total || 0),
+    status_pg: rec.status_pg || "-",
+    warning: rec.warning || "Normal",
+    waktuLabel: formatShortDate(rec.waktu),
+    questions: [],
+    answers: [],
+    durations: [],
+    fromDatabase: true
+  };
+}
+
+async function syncHistoryFromDatabaseIfEmpty() {
+  const localHistory = getExamHistory();
+  if (localHistory.length > 0) return localHistory;
+  const endpoint = getScriptEndpoint();
+  if (!endpoint || endpoint.includes("TEMPEL_URL")) return [];
+
+  try {
+    const res = await fetch(`${endpoint}?mode=rekap`);
     const json = await res.json();
     if (json && json.status === "sukses" && Array.isArray(json.rekap) && json.rekap.length > 0) {
       const seenIds = new Set();
@@ -125,7 +177,7 @@ function mapRekapRowToSession(rec, idx) {
           mapped.push(item);
         }
       });
-      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(mapped.slice(0, 150)));
+      localStorage.setItem(getHistoryKey(), JSON.stringify(mapped.slice(0, 150)));
       return mapped;
     }
   } catch (err) {
@@ -142,7 +194,7 @@ function loadAttemptIntoReview(attemptId) {
   if (!Array.isArray(found.questions) || found.questions.length === 0) {
     alert(
       `Sesi ${found.nama} (${found.waktuLabel || "-"}) berasal dari rekap database — Total Skor: ${found.total} ` +
-      `(TWK ${found.twk} \vert{} TIU${found.tiu} | TKP ${found.tkp} •${found.status_pg}). ` +
+      `(TWK ${found.twk} | TIU ${found.tiu} | TKP ${found.tkp} • ${found.status_pg}). ` +
       "Rincian pembahasan per butir soal hanya tersimpan untuk sesi yang dikerjakan di browser ini."
     );
     return;
@@ -155,9 +207,12 @@ function loadAttemptIntoReview(attemptId) {
   reviewMetaLabel = `Sesi ${found.nama} (${found.waktuLabel || ""}) — Total Skor: ${found.total}`;
 
   const sec = document.getElementById("reviewSection");
+  if (!sec) return;
   sec.classList.remove("hidden");
-  document.getElementById("reviewSectionTitle").textContent = "Pembahasan & Jawaban Sesi Terpilih";
-  document.getElementById("reviewSessionSubtitle").textContent = reviewMetaLabel;
+  const titleEl = document.getElementById("reviewSectionTitle");
+  const subEl = document.getElementById("reviewSessionSubtitle");
+  if (titleEl) titleEl.textContent = "Pembahasan & Jawaban Sesi Terpilih";
+  if (subEl) subEl.textContent = reviewMetaLabel;
   if (typeof populateReviewCategoryFilter === "function") {
     populateReviewCategoryFilter(reviewQuestions);
   }
@@ -180,7 +235,31 @@ function exportLocalHistoryToCsv() {
   const headers = ["Waktu", "Nama", "Formasi", "Instansi", "Mode", "TWK", "TIU", "TKP", "Total", "Status PG", "Warning"];
   const escapeCsv = (val) => {
     const s = String(val ?? "").replace(/"/g, '""');
-    return `"${s}"`; };  const lines = [ headers.map(escapeCsv).join(","), ...history.map(h => [ h.waktuLabel \vert{}\vert{} "-", h.nama \vert{}\vert{} "-", h.formasi \vert{}\vert{} "-", h.instansi \vert{}\vert{} "-", h.mode \vert{}\vert{} "-", Number(h.twk \vert{}\vert{} 0), Number(h.tiu \vert{}\vert{} 0), Number(h.tkp \vert{}\vert{} 0), Number(h.total \vert{}\vert{} 0), h.status_pg \vert{}\vert{} "-", h.warning \vert{}\vert{} "Normal" ].map(escapeCsv).join(",")) ];  const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8;" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `riwayat_cat_skd_${new Date().toISOString().slice(0, 10)}.csv`;
+    return `"${s}"`;
+  };
+
+  const lines = [
+    headers.map(escapeCsv).join(","),
+    ...history.map(h => [
+      h.waktuLabel || "-",
+      h.nama || "-",
+      h.formasi || "-",
+      h.instansi || "-",
+      h.mode || "-",
+      Number(h.twk || 0),
+      Number(h.tiu || 0),
+      Number(h.tkp || 0),
+      Number(h.total || 0),
+      h.status_pg || "-",
+      h.warning || "Normal"
+    ].map(escapeCsv).join(","))
+  ];
+
+  const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `riwayat_cat_skd_${new Date().toISOString().slice(0, 10)}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -191,7 +270,7 @@ function getFilteredUserSessions() {
   const allHistory = getExamHistory();
   const activeName = getActiveUserFilterName();
   return activeName
-    ? allHistory.filter(item => normalizeAccountKey(item.nama) === normalizeAccountKey(activeName))
+    ? allHistory.filter(item => safeAccountKey(item.nama) === safeAccountKey(activeName))
     : allHistory;
 }
 
@@ -201,15 +280,27 @@ function renderAttemptHistory() {
   const countBadge = document.getElementById("historyCountBadge");
   if (!listEl || !countBadge) return;
 
-  countBadge.textContent = `${filtered.length} Sesi`; listEl.replaceChildren();  if (filtered.length === 0) { const empty = document.createElement("div"); empty.className = "col-span-full text-xs text-slate-500 py-2"; empty.textContent = "Belum ada riwayat sesi tersimpan untuk review."; listEl.appendChild(empty); return; }  filtered.forEach((item, idx) => { const urutanLabel = idx === 0 ? "Terbaru (Sesudah)" : `Sebelumnya #${filtered.length - idx}`;
+  countBadge.textContent = `${filtered.length} Sesi`;
+  listEl.replaceChildren();
+
+  if (filtered.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "col-span-full text-xs text-slate-500 py-2";
+    empty.textContent = "Belum ada riwayat sesi tersimpan untuk review.";
+    listEl.appendChild(empty);
+    return;
+  }
+
+  filtered.forEach((item, idx) => {
+    const urutanLabel = idx === 0 ? "Terbaru (Sesudah)" : `Sebelumnya #${filtered.length - idx}`;
     const card = document.createElement("div");
     card.className = "bg-white border border-slate-200 rounded-xl p-3 flex items-center justify-between gap-3";
 
     const info = document.createElement("div");
     info.innerHTML = `
       <div class="text-xs font-extrabold text-slate-800">${urutanLabel} • Skor ${item.total}</div>
-      <div class="text-[11px] text-slate-500">TWK ${item.twk} \vert{} TIU${item.tiu} | TKP ${item.tkp} •${item.status_pg}</div>
-      <div class="text-[10px] text-slate-400">${escapeHtml(item.mode \vert{}\vert{} "")} • ${escapeHtml(item.waktuLabel || "")}</div>
+      <div class="text-[11px] text-slate-500">TWK ${item.twk} | TIU ${item.tiu} | TKP ${item.tkp} • ${safeText(item.status_pg)}</div>
+      <div class="text-[10px] text-slate-400">${safeText(item.mode || "")} • ${safeText(item.waktuLabel || "")}</div>
     `;
 
     const btn = document.createElement("button");
@@ -233,7 +324,9 @@ function renderDashboardUserPreviousExams() {
   const userSessions = getFilteredUserSessions();
 
   titleEl.textContent = activeName
-    ? `Ujian Sebelumnya — ${activeName}` : "Ujian Sebelumnya (Semua Sesi Tersimpan)"; countEl.textContent = `${userSessions.length} Sesi`;
+    ? `Ujian Sebelumnya — ${activeName}`
+    : "Ujian Sebelumnya (Semua Sesi Tersimpan)";
+  countEl.textContent = `${userSessions.length} Sesi`;
   listEl.replaceChildren();
 
   if (userSessions.length === 0) {
@@ -253,9 +346,9 @@ function renderDashboardUserPreviousExams() {
 
     const info = document.createElement("div");
     info.innerHTML = `
-      <div class="text-xs font-extrabold text-slate-800">${escapeHtml(label)} • Skor ${item.total}</div>
-      <div class="text-[11px] text-slate-500">TWK ${item.twk} \vert{} TIU${item.tiu} | TKP ${item.tkp} •${escapeHtml(item.status_pg)}</div>
-      <div class="text-[10px] text-slate-400">${escapeHtml(item.waktuLabel || "")}</div>
+      <div class="text-xs font-extrabold text-slate-800">${safeText(label)} • Skor ${item.total}</div>
+      <div class="text-[11px] text-slate-500">TWK ${item.twk} | TIU ${item.tiu} | TKP ${item.tkp} • ${safeText(item.status_pg)}</div>
+      <div class="text-[10px] text-slate-400">${safeText(item.waktuLabel || "")}</div>
     `;
 
     const btn = document.createElement("button");
@@ -382,10 +475,11 @@ function renderSingleTrendGroup(containerEl, sessionsChronological, seriesMode, 
         </div>
       </div>
 
-      <svg viewBox="0 0 ${width}${height}" class="w-full h-32">
+      <svg viewBox="0 0 ${width} ${height}" class="w-full h-32">
         <line x1="${padX}" y1="${padTop + plotHeight}" x2="${width - padX}" y2="${padTop + plotHeight}" stroke="#cbd5e1" stroke-width="1" />
         ${pgLineHtml}
-        ${seriesSvgHtml}${xLabelsHtml}
+        ${seriesSvgHtml}
+        ${xLabelsHtml}
       </svg>
 
       <div class="flex flex-wrap items-center justify-center gap-2.5 text-[10px] font-semibold text-slate-600">
@@ -410,7 +504,8 @@ function renderUserScoreTrendChart() {
   const fullSessions = userSessions.filter(s => !isFocusOrDrillMode(s.mode));
   const focusSessions = userSessions.filter(s => isFocusOrDrillMode(s.mode));
 
-  if (fullBadge) fullBadge.textContent = `${fullSessions.length} Sesi`; if (focusBadge) focusBadge.textContent = `${focusSessions.length} Sesi`;
+  if (fullBadge) fullBadge.textContent = `${fullSessions.length} Sesi`;
+  if (focusBadge) focusBadge.textContent = `${focusSessions.length} Sesi`;
 
   if (pgSummaryEl) {
     if (userSessions.length === 0) {
@@ -420,4 +515,395 @@ function renderUserScoreTrendChart() {
       const avgTiu = Math.round(userSessions.reduce((a, b) => a + Number(b.tiu || 0), 0) / userSessions.length);
       const avgTkp = Math.round(userSessions.reduce((a, b) => a + Number(b.tkp || 0), 0) / userSessions.length);
       pgSummaryEl.textContent =
-        `Rata-rata — TWK: ${avgTwk}/65 • TIU: ${avgTiu}/80 • T
+        `Rata-rata — TWK: ${avgTwk}/65 • TIU: ${avgTiu}/80 • TKP: ${avgTkp}/166`;
+    }
+  }
+
+  renderSingleTrendGroup(
+    fullBox,
+    fullSessions,
+    fullTrendSeriesMode,
+    "setFullTrendSeriesMode",
+    true,
+    "Belum ada sesi paket lengkap untuk grafik tren."
+  );
+
+  renderSingleTrendGroup(
+    focusBox,
+    focusSessions,
+    focusTrendSeriesMode,
+    "setFocusTrendSeriesMode",
+    false,
+    "Belum ada sesi fokus subtes / ulangi soal untuk grafik tren."
+  );
+}
+
+function populateDashboardInstitutionFilter() {
+  const selectEl = document.getElementById("dashboardFilterInstansi");
+  if (!selectEl || typeof dashboardRecords === "undefined" || !Array.isArray(dashboardRecords)) return;
+
+  const previousValue = selectEl.value || "ALL";
+  const institutions = Array.from(
+    new Set(
+      dashboardRecords
+        .map(r => String(r.instansi || "").trim())
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b, "id"));
+
+  selectEl.replaceChildren();
+  const allOpt = document.createElement("option");
+  allOpt.value = "ALL";
+  allOpt.textContent = "Semua Instansi";
+  selectEl.appendChild(allOpt);
+
+  institutions.forEach(inst => {
+    const opt = document.createElement("option");
+    opt.value = inst;
+    opt.textContent = inst;
+    selectEl.appendChild(opt);
+  });
+
+  selectEl.value = institutions.includes(previousValue) ? previousValue : "ALL";
+}
+
+function setDashboardScope(scope) {
+  if (typeof dashboardScope !== "undefined") dashboardScope = scope;
+  const allBtn = document.getElementById("scopeAllBtn");
+  const mineBtn = document.getElementById("scopeMineBtn");
+  if (allBtn && mineBtn) {
+    if (scope === "MINE") {
+      mineBtn.className = "px-3.5 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white";
+      allBtn.className = "px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200";
+    } else {
+      allBtn.className = "px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-900 text-white";
+      mineBtn.className = "px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200";
+    }
+  }
+  renderDashboardTable();
+}
+
+function setDashboardTop10Mode() {
+  if (typeof dashboardTop10Only !== "undefined") dashboardTop10Only = !dashboardTop10Only;
+  const btn = document.getElementById("scopeTop10Btn");
+  if (btn && typeof dashboardTop10Only !== "undefined") {
+    btn.className = dashboardTop10Only
+      ? "px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-600 text-white"
+      : "px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-100 text-amber-900 hover:bg-amber-200";
+  }
+  renderDashboardTable();
+}
+
+async function openDashboard() {
+  if (typeof showScreen === "function") showScreen("dashboard");
+  if (typeof refreshDashboardData === "function") await refreshDashboardData();
+}
+
+async function refreshDashboardData() {
+  const infoEl = document.getElementById("dashboardSourceInfo");
+  if (infoEl) infoEl.textContent = "Mengambil data rekap skor peserta...";
+  updateRestoreHistoryButtons();
+
+  const localRecords = getExamHistory().map(h => ({
+    waktu: h.waktuLabel || "-",
+    nama: h.nama || "Peserta",
+    formasi: h.formasi || "-",
+    instansi: h.instansi || "-",
+    mode: h.mode || "-",
+    twk: Number(h.twk || 0),
+    tiu: Number(h.tiu || 0),
+    tkp: Number(h.tkp || 0),
+    total: Number(h.total || 0),
+    status_pg: h.status_pg || "-",
+    warning: h.warning || "Normal"
+  }));
+
+  const endpoint = getScriptEndpoint();
+
+  if (!endpoint || endpoint.includes("TEMPEL_URL")) {
+    if (typeof dashboardRecords !== "undefined") dashboardRecords = localRecords;
+    if (infoEl) infoEl.textContent = `Status Koneksi: Lokal Saja • ${localRecords.length} data di browser ini.`;
+    renderDashboardUserPreviousExams();
+    renderUserScoreTrendChart();
+    populateDashboardInstitutionFilter();
+    renderDashboardTable();
+    loadVerifiedDonationsForDashboard();
+    return;
+  }
+
+  try {
+    const res = await fetch(`${endpoint}?mode=rekap`);
+    const json = await res.json();
+    if (json && json.status === "sukses" && Array.isArray(json.rekap) && json.rekap.length > 0) {
+      const reversedRekap = json.rekap.slice().reverse();
+      if (typeof dashboardRecords !== "undefined") dashboardRecords = reversedRekap;
+
+      if (getExamHistory().length === 0 && !getBackupExamHistory().length) {
+        const seenIds = new Set();
+        const mapped = [];
+        reversedRekap.forEach((r, i) => {
+          const item = mapRekapRowToSession(r, i);
+          if (!seenIds.has(item.id)) {
+            seenIds.add(item.id);
+            mapped.push(item);
+          }
+        });
+        localStorage.setItem(getHistoryKey(), JSON.stringify(mapped.slice(0, 150)));
+      }
+
+      if (infoEl) infoEl.textContent = `Status Koneksi: Terhubung ke Google Sheets • ${reversedRekap.length} data tercatat.`;
+    } else {
+      if (typeof dashboardRecords !== "undefined") dashboardRecords = localRecords;
+      if (infoEl) infoEl.textContent = `Status Koneksi: Lokal (${localRecords.length} data tersimpan di browser).`;
+    }
+  } catch (err) {
+    if (typeof dashboardRecords !== "undefined") dashboardRecords = localRecords;
+    if (infoEl) infoEl.textContent = `Status Koneksi: Cadangan Lokal / Offline (${localRecords.length} data di browser).`;
+  }
+
+  renderDashboardUserPreviousExams();
+  renderUserScoreTrendChart();
+  populateDashboardInstitutionFilter();
+  renderDashboardTable();
+  loadVerifiedDonationsForDashboard();
+}
+
+function renderDashboardTable() {
+  const tbody = document.getElementById("dashboardTableBody");
+  if (!tbody) return;
+
+  const records = (typeof dashboardRecords !== "undefined" && Array.isArray(dashboardRecords)) ? dashboardRecords : [];
+  const scope = typeof dashboardScope !== "undefined" ? dashboardScope : "ALL";
+  const top10Only = typeof dashboardTop10Only !== "undefined" ? dashboardTop10Only : false;
+
+  const qText = (document.getElementById("dashboardSearchInput")?.value || "").trim().toLowerCase();
+  const pgFilter = document.getElementById("dashboardFilterPg")?.value || "ALL";
+  const instFilter = document.getElementById("dashboardFilterInstansi")?.value || "ALL";
+  const modeFilter = document.getElementById("dashboardFilterMode")?.value || "ALL";
+  const activeName = getActiveUserFilterName();
+  const activeKey = activeName ? safeAccountKey(activeName) : "";
+
+  const filtered = records.filter(rec => {
+    if (scope === "MINE") {
+      if (!activeKey || safeAccountKey(rec.nama) !== activeKey) {
+        return false;
+      }
+    }
+    const matchPg = pgFilter === "ALL" || rec.status_pg === pgFilter;
+    const matchInst = instFilter === "ALL" || String(rec.instansi || "").trim() === instFilter;
+    const isFocus = isFocusOrDrillMode(rec.mode);
+    const matchMode =
+      modeFilter === "ALL" ||
+      (modeFilter === "FULL" && !isFocus) ||
+      (modeFilter === "FOCUS" && isFocus);
+    const hay = `${rec.nama} ${rec.formasi} ${rec.instansi} ${rec.mode || ""}`.toLowerCase();
+    const matchText = !qText || hay.includes(qText);
+    return matchPg && matchInst && matchMode && matchText;
+  });
+
+  const sortedRows = filtered
+    .slice()
+    .sort((a, b) => Number(b.total || 0) - Number(a.total || 0));
+
+  const rowsToDisplay = top10Only ? sortedRows.slice(0, 10) : sortedRows;
+
+  const totalAttempts = rowsToDisplay.length;
+  const highestScore = totalAttempts > 0 ? Math.max(...rowsToDisplay.map(r => Number(r.total || 0))) : 0;
+  const avgScore = totalAttempts > 0
+    ? Math.round(rowsToDisplay.reduce((acc, r) => acc + Number(r.total || 0), 0) / totalAttempts)
+    : 0;
+  const passCount = rowsToDisplay.filter(r => r.status_pg === "LULUS PG").length;
+
+  const elTotal = document.getElementById("dashTotalAttempts");
+  const elHigh = document.getElementById("dashHighestScore");
+  const elAvg = document.getElementById("dashAverageScore");
+  const elPass = document.getElementById("dashPassCount");
+  if (elTotal) elTotal.textContent = totalAttempts;
+  if (elHigh) elHigh.textContent = highestScore;
+  if (elAvg) elAvg.textContent = avgScore;
+  if (elPass) elPass.textContent = passCount;
+
+  tbody.replaceChildren();
+
+  if (rowsToDisplay.length === 0) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td colspan="10" class="py-6 px-4 text-center text-slate-500">Belum ada data skor peserta yang sesuai filter.</td>`;
+    tbody.appendChild(tr);
+    return;
+  }
+
+  rowsToDisplay.forEach((rec, i) => {
+    const tr = document.createElement("tr");
+    const isCurrentUserRow = activeKey && safeAccountKey(rec.nama) === activeKey;
+    tr.className = isCurrentUserRow ? "bg-blue-50/60 hover:bg-blue-50" : "hover:bg-slate-50";
+
+    const isPass = rec.status_pg === "LULUS PG";
+    const badgeClass = isPass
+      ? "bg-emerald-100 text-emerald-800"
+      : "bg-rose-100 text-rose-800";
+    const rankNum = i + 1;
+    const rankBadge = rankNum <= 3
+      ? `<span class="ml-1 inline-block text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">Top #${rankNum}</span>`
+      : "";
+    const youBadge = isCurrentUserRow
+      ? `<span class="ml-1 inline-block text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">Anda</span>`
+      : "";
+    const focusTag = isFocusOrDrillMode(rec.mode)
+      ? `<span class="ml-1 inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">Fokus</span>`
+      : "";
+
+    tr.innerHTML = `
+      <td class="py-2.5 px-3 font-semibold text-slate-500">${rankNum}</td>
+      <td class="py-2.5 px-3 font-bold text-slate-800">${safeText(rec.nama)}${rankBadge}${youBadge}</td>
+      <td class="py-2.5 px-3 font-medium text-slate-800">${safeText(rec.formasi)}${focusTag}</td>
+      <td class="py-2.5 px-3 text-slate-600">${safeText(rec.instansi)}</td>
+      <td class="py-2.5 px-3 text-center font-semibold">${Number(rec.twk || 0)}</td>
+      <td class="py-2.5 px-3 text-center font-semibold">${Number(rec.tiu || 0)}</td>
+      <td class="py-2.5 px-3 text-center font-semibold">${Number(rec.tkp || 0)}</td>
+      <td class="py-2.5 px-3 text-center font-extrabold text-blue-700">${Number(rec.total || 0)}</td>
+      <td class="py-2.5 px-3 text-center">
+        <span class="text-xs font-bold px-2 py-0.5 rounded ${badgeClass}">${safeText(rec.status_pg)}</span>
+      </td>
+      <td class="py-2.5 px-3 text-xs text-slate-500 whitespace-nowrap">${safeText(formatShortDate(rec.waktu))}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function openDonationModal() {
+  if (typeof isExamActive !== "undefined" && isExamActive) {
+    alert("Selesaikan atau keluar dari sesi ujian aktif terlebih dahulu sebelum membuka menu donasi.");
+    return;
+  }
+  const modal = document.getElementById("donationModal");
+  if (modal) {
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+  }
+}
+
+function closeDonationModal() {
+  const modal = document.getElementById("donationModal");
+  if (modal) {
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+  }
+}
+
+function selectDonationPreset(amountLabel) {
+  const inputEl = document.getElementById("donationAmountInput");
+  if (inputEl) {
+    inputEl.value = amountLabel;
+  }
+  document.querySelectorAll(".donation-preset-btn").forEach(btn => {
+    const isMatch = btn.dataset.amount === amountLabel;
+    btn.className = isMatch
+      ? "donation-preset-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-600 text-white"
+      : "donation-preset-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100";
+  });
+}
+
+async function copyDonationText(textToCopy, feedbackId) {
+  const fb = document.getElementById(feedbackId);
+  try {
+    await navigator.clipboard.writeText(textToCopy);
+  } catch (err) {
+    const tempInput = document.createElement("input");
+    tempInput.value = textToCopy;
+    document.body.appendChild(tempInput);
+    tempInput.select();
+    document.execCommand("copy");
+    document.body.removeChild(tempInput);
+  }
+  if (fb) {
+    fb.textContent = `Tersalin: ${textToCopy}`;
+    fb.classList.remove("hidden");
+    setTimeout(() => fb.classList.add("hidden"), 2500);
+  }
+}
+
+async function confirmDonationNote() {
+  const amountVal = (document.getElementById("donationAmountInput")?.value || "Seikhlasnya").trim();
+  const senderVal = (document.getElementById("donationSenderInput")?.value || "Donatur Anonim").trim();
+  const noteEl = document.getElementById("donationThankYouNote");
+  if (!noteEl) return;
+
+  const endpoint = getScriptEndpoint();
+  if (!endpoint || endpoint.includes("TEMPEL_URL")) {
+    noteEl.textContent =
+      `Terima kasih ${senderVal} atas dukungan donasi (${amountVal}). Hubungkan GOOGLE_SCRIPT_URL agar masuk antrean verifikasi sebelum tampil di Dashboard.`;
+    noteEl.classList.remove("hidden");
+    return;
+  }
+
+  noteEl.textContent = "Mengirim konfirmasi donasi untuk antrean verifikasi...";
+  noteEl.classList.remove("hidden");
+
+  try {
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        action: "submit_donation_pending",
+        nama: senderVal,
+        nominal: amountVal,
+        kanal: "ShopeePay 082388494114 / BSI 1149630924",
+        catatan: "Menunggu pengecekan mutasi oleh admin"
+      })
+    });
+    const json = await res.json();
+    if (json && json.status === "sukses") {
+      noteEl.textContent =
+        `Terima kasih ${senderVal} (${amountVal}). Konfirmasi Anda berstatus MENUNGGU VERIFIKASI dan akan tampil di Dashboard setelah dana dipastikan diterima.`;
+    } else {
+      noteEl.textContent = "Konfirmasi belum terkirim ke server. Silakan coba lagi.";
+    }
+  } catch (err) {
+    noteEl.textContent = "Gagal mengirim konfirmasi donasi. Periksa koneksi internet Anda.";
+  }
+}
+
+async function loadVerifiedDonationsForDashboard() {
+  const listEl = document.getElementById("dashboardVerifiedDonationsList");
+  const countEl = document.getElementById("dashboardVerifiedDonationsCount");
+  if (!listEl) return;
+
+  const endpoint = getScriptEndpoint();
+  if (!endpoint || endpoint.includes("TEMPEL_URL")) {
+    if (countEl) countEl.textContent = "0 Terverifikasi";
+    listEl.innerHTML = `<div class="text-xs text-slate-500">Donasi berstatus TERVERIFIKASI akan tampil otomatis setelah GOOGLE_SCRIPT_URL aktif.</div>`;
+    return;
+  }
+
+  try {
+    const res = await fetch(`${endpoint}?mode=donasi`);
+    const json = await res.json();
+    const list = (json && json.status === "sukses" && Array.isArray(json.donasi)) ? json.donasi : [];
+
+    if (countEl) countEl.textContent = `${list.length} Terverifikasi`;
+    listEl.replaceChildren();
+
+    if (list.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "text-xs text-slate-500";
+      empty.textContent = "Belum ada donasi yang berstatus TERVERIFIKASI.";
+      listEl.appendChild(empty);
+      return;
+    }
+
+    list.forEach(item => {
+      const row = document.createElement("div");
+      row.className = "bg-white border border-emerald-200 rounded-lg px-3 py-2 flex items-center justify-between gap-2";
+      row.innerHTML = `
+        <div>
+          <div class="text-xs font-extrabold text-slate-800">${safeText(item.nama)} • <span class="text-emerald-700">${safeText(item.nominal)}</span></div>
+          <div class="text-[10px] text-slate-500">${safeText(item.kanal || "")} • ${safeText(formatShortDate(item.waktu))}</div>
+        </div>
+        <span class="text-[10px] font-extrabold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 shrink-0">TERVERIFIKASI</span>
+      `;
+      listEl.appendChild(row);
+    });
+  } catch (err) {
+    listEl.innerHTML = `<div class="text-xs text-slate-500">Tidak dapat memuat daftar donasi terverifikasi saat ini.</div>`;
+  }
+}
