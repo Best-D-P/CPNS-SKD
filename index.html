@@ -410,6 +410,7 @@
           <p id="resultFormationInfo" class="text-xs sm:text-sm text-amber-300 font-semibold mt-1"></p>
           <p id="resultMetaInfo" class="text-xs text-slate-400 mt-1.5"></p>
           <p id="resultFocusTargetNote" class="hidden text-xs text-emerald-300 font-semibold mt-1"></p>
+          <p id="resultComparisonNote" class="hidden text-xs text-sky-300 font-semibold mt-1"></p>
         </div>
         <div class="bg-white/10 backdrop-blur px-6 py-4 rounded-2xl text-center border border-white/15">
           <div class="text-xs uppercase tracking-wider text-slate-300">Total Skor SKD</div>
@@ -486,6 +487,9 @@
       <div class="px-6 pb-6 flex flex-wrap gap-3 no-print">
         <button onclick="resetAndRestartFromSetup()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl">
           Ulangi Simulasi Baru
+        </button>
+        <button onclick="retryWrongAndDoubtQuestions()" class="bg-rose-600 hover:bg-rose-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl">
+          Ulangi Soal Salah & Ragu
         </button>
         <button onclick="openDashboard()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl">
           Lihat Dashboard Semua Skor
@@ -637,11 +641,19 @@
           <h3 id="reviewSectionTitle" class="font-extrabold text-lg text-slate-800">Pembahasan Lengkap Soal SKD</h3>
           <p id="reviewSessionSubtitle" class="text-xs text-slate-500"></p>
         </div>
-        <div class="flex gap-1.5">
-          <button onclick="renderReview('ALL')" class="px-3 py-1 text-xs font-bold rounded-lg bg-slate-800 text-white">Semua</button>
-          <button onclick="renderReview('TWK')" class="px-3 py-1 text-xs font-bold rounded-lg bg-slate-100 text-slate-700">TWK</button>
-          <button onclick="renderReview('TIU')" class="px-3 py-1 text-xs font-bold rounded-lg bg-slate-100 text-slate-700">TIU</button>
-          <button onclick="renderReview('TKP')" class="px-3 py-1 text-xs font-bold rounded-lg bg-slate-100 text-slate-700">TKP</button>
+        <div class="flex flex-wrap items-center gap-1.5">
+          <button onclick="renderReview('ALL')" data-subtest="ALL" class="review-subtest-btn active-subtest px-3 py-1 text-xs font-bold rounded-lg bg-slate-800 text-white">Semua</button>
+          <button onclick="renderReview('TWK')" data-subtest="TWK" class="review-subtest-btn px-3 py-1 text-xs font-bold rounded-lg bg-slate-100 text-slate-700">TWK</button>
+          <button onclick="renderReview('TIU')" data-subtest="TIU" class="review-subtest-btn px-3 py-1 text-xs font-bold rounded-lg bg-slate-100 text-slate-700">TIU</button>
+          <button onclick="renderReview('TKP')" data-subtest="TKP" class="review-subtest-btn px-3 py-1 text-xs font-bold rounded-lg bg-slate-100 text-slate-700">TKP</button>
+          <select id="reviewCategoryFilter" onchange="renderReview(document.querySelector('.review-subtest-btn.active-subtest')?.dataset.subtest || 'ALL')"
+            class="px-2.5 py-1 text-xs font-bold rounded-lg border border-slate-300 bg-white text-slate-700">
+            <option value="ALL">Semua Kategori</option>
+          </select>
+          <button type="button" id="reviewOnlyWeakBtn" onclick="toggleReviewWeakOnly()"
+            class="px-3 py-1 text-xs font-bold rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100">
+            Hanya Salah / Poin &lt; 5
+          </button>
         </div>
       </div>
 
@@ -656,10 +668,10 @@
     Simulasi CAT SKD CPNS BKN • Dibuat oleh <strong class="text-slate-700">Best D Pamungkas</strong>
   </footer>
 
-  <script src="js/config.js?v=3"></script>
-  <script src="js/questions.js?v=3"></script>
-  <script src="js/auth.js?v=3"></script>
-  <script src="js/dashboard.js?v=3"></script>
-  <script src="js/exam.js?v=3"></script>
+  <script src="js/config.js?v=4"></script>
+  <script src="js/questions.js?v=4"></script>
+  <script src="js/auth.js?v=4"></script>
+  <script src="js/dashboard.js?v=4"></script>
+  <script src="js/exam.js?v=4"></script>
 </body>
 </html>
