@@ -17,7 +17,7 @@ function getExamHistory() {
 function saveAttemptToHistory(attemptRecord) {
   const history = getExamHistory();
   history.unshift(attemptRecord);
-  localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history.slice(0, 50)));
+  localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history.slice(0, 150)));
 }
 
 function getFilteredUserSessions() {
