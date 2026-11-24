@@ -42,6 +42,47 @@ function clearLocalExamHistory() {
   refreshDashboardData();
 }
 
+function exportLocalHistoryToCsv() {
+  const history = getExamHistory();
+  if (!history.length) {
+    alert("Belum ada riwayat ujian lokal untuk diunduh.");
+    return;
+  }
+
+  const headers = ["Waktu", "Nama", "Formasi", "Instansi", "Mode", "TWK", "TIU", "TKP", "Total", "Status PG", "Warning"];
+  const escapeCsv = (val) => {
+    const s = String(val ?? "").replace(/"/g, '""');
+    return `"${s}"`;
+  };
+
+  const lines = [
+    headers.map(escapeCsv).join(","),
+    ...history.map(h => [
+      h.waktuLabel || "-",
+      h.nama || "-",
+      h.formasi || "-",
+      h.instansi || "-",
+      h.mode || "-",
+      Number(h.twk || 0),
+      Number(h.tiu || 0),
+      Number(h.tkp || 0),
+      Number(h.total || 0),
+      h.status_pg || "-",
+      h.warning || "Normal"
+    ].map(escapeCsv).join(","))
+  ];
+
+  const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `riwayat_cat_skd_${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 function getFilteredUserSessions() {
   const allHistory = getExamHistory();
   const activeName = getActiveUserFilterName();
@@ -76,7 +117,7 @@ function renderAttemptHistory() {
     info.innerHTML = `
       <div class="text-xs font-extrabold text-slate-800">${urutanLabel} • Skor ${item.total}</div>
       <div class="text-[11px] text-slate-500">TWK ${item.twk} | TIU ${item.tiu} | TKP ${item.tkp} • ${item.status_pg}</div>
-      <div class="text-[10px] text-slate-400">${item.waktuLabel || ""}</div>
+      <div class="text-[10px] text-slate-400">${escapeHtml(item.mode || "")} • ${escapeHtml(item.waktuLabel || "")}</div>
     `;
 
     const btn = document.createElement("button");
@@ -318,6 +359,7 @@ function renderDashboardTable() {
   const qText = (document.getElementById("dashboardSearchInput")?.value || "").trim().toLowerCase();
   const pgFilter = document.getElementById("dashboardFilterPg")?.value || "ALL";
   const instFilter = document.getElementById("dashboardFilterInstansi")?.value || "ALL";
+  const modeFilter = document.getElementById("dashboardFilterMode")?.value || "ALL";
   const activeName = getActiveUserFilterName();
   const activeKey = activeName ? normalizeAccountKey(activeName) : "";
 
@@ -329,9 +371,14 @@ function renderDashboardTable() {
     }
     const matchPg = pgFilter === "ALL" || rec.status_pg === pgFilter;
     const matchInst = instFilter === "ALL" || String(rec.instansi || "").trim() === instFilter;
-    const hay = `${rec.nama} ${rec.formasi} ${rec.instansi}`.toLowerCase();
+    const modeStr = String(rec.mode || "").toLowerCase();
+    const matchMode =
+      modeFilter === "ALL" ||
+      (modeFilter === "FULL" && !modeStr.includes("fokus")) ||
+      (modeFilter === "FOCUS" && modeStr.includes("fokus"));
+    const hay = `${rec.nama} ${rec.formasi} ${rec.instansi} ${rec.mode || ""}`.toLowerCase();
     const matchText = !qText || hay.includes(qText);
-    return matchPg && matchInst && matchText;
+    return matchPg && matchInst && matchMode && matchText;
   });
 
   const sortedRows = filtered
@@ -380,11 +427,14 @@ function renderDashboardTable() {
     const youBadge = isCurrentUserRow
       ? `<span class="ml-1 inline-block text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">Anda</span>`
       : "";
+    const focusTag = String(rec.mode || "").toLowerCase().includes("fokus")
+      ? `<span class="ml-1 inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">Fokus</span>`
+      : "";
 
     tr.innerHTML = `
       <td class="py-2.5 px-3 font-semibold text-slate-500">${rankNum}</td>
       <td class="py-2.5 px-3 font-bold text-slate-800">${escapeHtml(rec.nama)}${rankBadge}${youBadge}</td>
-      <td class="py-2.5 px-3 font-medium text-slate-800">${escapeHtml(rec.formasi)}</td>
+      <td class="py-2.5 px-3 font-medium text-slate-800">${escapeHtml(rec.formasi)}${focusTag}</td>
       <td class="py-2.5 px-3 text-slate-600">${escapeHtml(rec.instansi)}</td>
       <td class="py-2.5 px-3 text-center font-semibold">${rec.twk}</td>
       <td class="py-2.5 px-3 text-center font-semibold">${rec.tiu}</td>
