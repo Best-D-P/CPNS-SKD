@@ -591,7 +591,18 @@
           <div id="dashUserHistoryList" class="grid grid-cols-1 gap-2 max-h-52 overflow-y-auto custom-scroll pr-1"></div>
         </div>
       </div>
-
+<div class="px-6 pt-4">
+        <div class="border border-emerald-200 bg-emerald-50/50 rounded-xl p-4 space-y-2.5">
+          <div class="flex items-center justify-between gap-2">
+            <div>
+              <h3 class="text-sm font-extrabold text-slate-800">Donasi Terverifikasi</h3>
+              <p class="text-[11px] text-slate-500">Hanya menampilkan donasi yang sudah dicek dan disetujui (status TERVERIFIKASI).</p>
+            </div>
+            <span id="dashboardVerifiedDonationsCount" class="text-xs font-bold text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-full">0 Terverifikasi</span>
+          </div>
+          <div id="dashboardVerifiedDonationsList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2"></div>
+        </div>
+      </div>
       <div class="p-6 pb-3 flex flex-wrap items-center justify-between gap-3">
         <div class="flex flex-wrap items-center gap-2">
           <button type="button" id="scopeAllBtn" onclick="setDashboardScope('ALL')" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-900 text-white">
