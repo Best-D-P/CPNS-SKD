@@ -14,7 +14,9 @@ function formatShortDate(raw) {
 }
 
 function getActiveUserFilterName() {
-  if (loggedUser && loggedUser.nama) return loggedUser.nama.trim();
+  if (typeof loggedUser !== "undefined" && loggedUser && loggedUser.nama) {
+    return loggedUser.nama.trim();
+  }
   const inputVal = (document.getElementById("participantNameInput")?.value || "").trim();
   return inputVal;
 }
@@ -59,7 +61,9 @@ function clearLocalExamHistory() {
     updateRestoreHistoryButtons();
     return;
   }
-  if (!confirm("Hapus riwayat ujian lokal di browser ini? Cadangan sementara akan disimpan agar bisa dipulihkan jika terlanjur terhapus.")) return;
+  if (!confirm("Hapus riwayat ujian lokal di browser ini? Cadangan sementara akan disimpan agar bisa dipulihkan jika terlanjur terhapus.")) {
+    return;
+  }
 
   localStorage.setItem(BACKUP_HISTORY_STORAGE_KEY, JSON.stringify(current.slice(0, 150)));
   localStorage.removeItem(HISTORY_STORAGE_KEY);
@@ -97,13 +101,38 @@ function restoreClearedExamHistory() {
   renderDashboardUserPreviousExams();
   renderUserScoreTrendChart();
   refreshDashboardData();
-  alert(`Berhasil mengembalikan ${backup.length} sesi riwayat ujian lokal.`);
+  alert("Berhasil mengembalikan " + backup.length + " sesi riwayat ujian lokal.");
 }
 
 function mapRekapRowToSession(rec, idx) {
   const keyPart = `${normalizeAccountKey(rec.nama)}_${rec.total}_${String(rec.waktu || idx).replace(/\W+/g, "")}`;
   return {
-    id: `db_${keyPart}`, nama: rec.nama \vert{}\vert{} "Peserta", formasi: rec.formasi \vert{}\vert{} "-", instansi: rec.instansi \vert{}\vert{} "-", mode: rec.mode \vert{}\vert{} "Reguler", twk: Number(rec.twk \vert{}\vert{} 0), tiu: Number(rec.tiu \vert{}\vert{} 0), tkp: Number(rec.tkp \vert{}\vert{} 0), total: Number(rec.total \vert{}\vert{} 0), status_pg: rec.status_pg \vert{}\vert{} "-", warning: rec.warning \vert{}\vert{} "Normal", waktuLabel: formatShortDate(rec.waktu), questions: [], answers: [], durations: [], fromDatabase: true }; }  async function syncHistoryFromDatabaseIfEmpty() { const localHistory = getExamHistory(); if (localHistory.length > 0) return localHistory; if (!GOOGLE_SCRIPT_URL \vert{}\vert{} GOOGLE_SCRIPT_URL.includes("TEMPEL_URL")) return [];  try { const res = await fetch(`${GOOGLE_SCRIPT_URL}?mode=rekap`);
+    id: `db_${keyPart}`,
+    nama: rec.nama || "Peserta",
+    formasi: rec.formasi || "-",
+    instansi: rec.instansi || "-",
+    mode: rec.mode || "Reguler",
+    twk: Number(rec.twk || 0),
+    tiu: Number(rec.tiu || 0),
+    tkp: Number(rec.tkp || 0),
+    total: Number(rec.total || 0),
+    status_pg: rec.status_pg || "-",
+    warning: rec.warning || "Normal",
+    waktuLabel: formatShortDate(rec.waktu),
+    questions: [],
+    answers: [],
+    durations: [],
+    fromDatabase: true
+  };
+}
+
+async function syncHistoryFromDatabaseIfEmpty() {
+  const localHistory = getExamHistory();
+  if (localHistory.length > 0) return localHistory;
+  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("TEMPEL_URL")) return [];
+
+  try {
+    const res = await fetch(`${GOOGLE_SCRIPT_URL}?mode=rekap`);
     const json = await res.json();
     if (json && json.status === "sukses" && Array.isArray(json.rekap) && json.rekap.length > 0) {
       const seenIds = new Set();
@@ -132,7 +161,7 @@ function loadAttemptIntoReview(attemptId) {
   if (!Array.isArray(found.questions) || found.questions.length === 0) {
     alert(
       `Sesi ${found.nama} (${found.waktuLabel || "-"}) berasal dari rekap database — Total Skor: ${found.total} ` +
-      `(TWK ${found.twk} \vert{} TIU${found.tiu} | TKP ${found.tkp} •${found.status_pg}). ` +
+      `(TWK ${found.twk} | TIU ${found.tiu} | TKP ${found.tkp} • ${found.status_pg}). ` +
       "Rincian pembahasan per butir soal hanya tersimpan untuk sesi yang dikerjakan di browser ini."
     );
     return;
@@ -148,9 +177,15 @@ function loadAttemptIntoReview(attemptId) {
   sec.classList.remove("hidden");
   document.getElementById("reviewSectionTitle").textContent = "Pembahasan & Jawaban Sesi Terpilih";
   document.getElementById("reviewSessionSubtitle").textContent = reviewMetaLabel;
-  populateReviewCategoryFilter(reviewQuestions);
-  updateWeakFilterButtonUI();
-  renderReview("ALL");
+  if (typeof populateReviewCategoryFilter === "function") {
+    populateReviewCategoryFilter(reviewQuestions);
+  }
+  if (typeof updateWeakFilterButtonUI === "function") {
+    updateWeakFilterButtonUI();
+  }
+  if (typeof renderReview === "function") {
+    renderReview("ALL");
+  }
   sec.scrollIntoView({ behavior: "smooth" });
 }
 
@@ -164,7 +199,31 @@ function exportLocalHistoryToCsv() {
   const headers = ["Waktu", "Nama", "Formasi", "Instansi", "Mode", "TWK", "TIU", "TKP", "Total", "Status PG", "Warning"];
   const escapeCsv = (val) => {
     const s = String(val ?? "").replace(/"/g, '""');
-    return `"${s}"`; };  const lines = [ headers.map(escapeCsv).join(","), ...history.map(h => [ h.waktuLabel \vert{}\vert{} "-", h.nama \vert{}\vert{} "-", h.formasi \vert{}\vert{} "-", h.instansi \vert{}\vert{} "-", h.mode \vert{}\vert{} "-", Number(h.twk \vert{}\vert{} 0), Number(h.tiu \vert{}\vert{} 0), Number(h.tkp \vert{}\vert{} 0), Number(h.total \vert{}\vert{} 0), h.status_pg \vert{}\vert{} "-", h.warning \vert{}\vert{} "Normal" ].map(escapeCsv).join(",")) ];  const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8;" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `riwayat_cat_skd_${new Date().toISOString().slice(0, 10)}.csv`;
+    return `"${s}"`;
+  };
+
+  const lines = [
+    headers.map(escapeCsv).join(","),
+    ...history.map(h => [
+      h.waktuLabel || "-",
+      h.nama || "-",
+      h.formasi || "-",
+      h.instansi || "-",
+      h.mode || "-",
+      Number(h.twk || 0),
+      Number(h.tiu || 0),
+      Number(h.tkp || 0),
+      Number(h.total || 0),
+      h.status_pg || "-",
+      h.warning || "Normal"
+    ].map(escapeCsv).join(","))
+  ];
+
+  const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `riwayat_cat_skd_${new Date().toISOString().slice(0, 10)}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -185,15 +244,27 @@ function renderAttemptHistory() {
   const countBadge = document.getElementById("historyCountBadge");
   if (!listEl || !countBadge) return;
 
-  countBadge.textContent = `${filtered.length} Sesi`; listEl.replaceChildren();  if (filtered.length === 0) { const empty = document.createElement("div"); empty.className = "col-span-full text-xs text-slate-500 py-2"; empty.textContent = "Belum ada riwayat sesi tersimpan untuk review."; listEl.appendChild(empty); return; }  filtered.forEach((item, idx) => { const urutanLabel = idx === 0 ? "Terbaru (Sesudah)" : `Sebelumnya #${filtered.length - idx}`;
+  countBadge.textContent = `${filtered.length} Sesi`;
+  listEl.replaceChildren();
+
+  if (filtered.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "col-span-full text-xs text-slate-500 py-2";
+    empty.textContent = "Belum ada riwayat sesi tersimpan untuk review.";
+    listEl.appendChild(empty);
+    return;
+  }
+
+  filtered.forEach((item, idx) => {
+    const urutanLabel = idx === 0 ? "Terbaru (Sesudah)" : `Sebelumnya #${filtered.length - idx}`;
     const card = document.createElement("div");
     card.className = "bg-white border border-slate-200 rounded-xl p-3 flex items-center justify-between gap-3";
 
     const info = document.createElement("div");
     info.innerHTML = `
       <div class="text-xs font-extrabold text-slate-800">${urutanLabel} • Skor ${item.total}</div>
-      <div class="text-[11px] text-slate-500">TWK ${item.twk} \vert{} TIU${item.tiu} | TKP ${item.tkp} •${item.status_pg}</div>
-      <div class="text-[10px] text-slate-400">${escapeHtml(item.mode \vert{}\vert{} "")} • ${escapeHtml(item.waktuLabel || "")}</div>
+      <div class="text-[11px] text-slate-500">TWK ${item.twk} | TIU ${item.tiu} | TKP ${item.tkp} • ${item.status_pg}</div>
+      <div class="text-[10px] text-slate-400">${escapeHtml(item.mode || "")} • ${escapeHtml(item.waktuLabel || "")}</div>
     `;
 
     const btn = document.createElement("button");
@@ -217,7 +288,9 @@ function renderDashboardUserPreviousExams() {
   const userSessions = getFilteredUserSessions();
 
   titleEl.textContent = activeName
-    ? `Ujian Sebelumnya — ${activeName}` : "Ujian Sebelumnya (Semua Sesi Tersimpan)"; countEl.textContent = `${userSessions.length} Sesi`;
+    ? `Ujian Sebelumnya — ${activeName}`
+    : "Ujian Sebelumnya (Semua Sesi Tersimpan)";
+  countEl.textContent = `${userSessions.length} Sesi`;
   listEl.replaceChildren();
 
   if (userSessions.length === 0) {
@@ -238,7 +311,7 @@ function renderDashboardUserPreviousExams() {
     const info = document.createElement("div");
     info.innerHTML = `
       <div class="text-xs font-extrabold text-slate-800">${escapeHtml(label)} • Skor ${item.total}</div>
-      <div class="text-[11px] text-slate-500">TWK ${item.twk} \vert{} TIU${item.tiu} | TKP ${item.tkp} •${escapeHtml(item.status_pg)}</div>
+      <div class="text-[11px] text-slate-500">TWK ${item.twk} | TIU ${item.tiu} | TKP ${item.tkp} • ${escapeHtml(item.status_pg)}</div>
       <div class="text-[10px] text-slate-400">${escapeHtml(item.waktuLabel || "")}</div>
     `;
 
@@ -255,13 +328,21 @@ function renderDashboardUserPreviousExams() {
 
 function setTrendChartSeriesMode(mode) {
   trendChartSeriesMode = mode || "ALL";
-  document.querySelectorAll(".trend-series-btn").forEach(btn => {
-    const active = btn.dataset.series === trendChartSeriesMode;
-    btn.className = `trend-series-btn px-2 py-0.5 rounded text-[10px] font-bold transition ${ active ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200" }`; }); renderUserScoreTrendChart(); }  function renderUserScoreTrendChart() { const chartBox = document.getElementById("userScoreTrendChart"); const badgeEl = document.getElementById("trendChartBadge"); const pgSummaryEl = document.getElementById("trendPgSummary"); if (!chartBox \vert{}\vert{} !badgeEl) return;  const sessionsChronological = getFilteredUserSessions().slice().reverse(); badgeEl.textContent = `${sessionsChronological.length} Sesi`;
+  renderUserScoreTrendChart();
+}
+
+function renderUserScoreTrendChart() {
+  const chartBox = document.getElementById("userScoreTrendChart");
+  const badgeEl = document.getElementById("trendChartBadge");
+  const pgSummaryEl = document.getElementById("trendPgSummary");
+  if (!chartBox || !badgeEl) return;
+
+  const sessionsChronological = getFilteredUserSessions().slice().reverse();
+  badgeEl.textContent = `${sessionsChronological.length} Sesi`;
 
   if (pgSummaryEl) {
     if (sessionsChronological.length === 0) {
-      pgSummaryEl.textContent = "PG Acuan: TWK ≥ 65 • TIU ≥ 80 • TKP ≥ 166 (Total ≥ 311)";
+      pgSummaryEl.textContent = "PG Acuan: TWK >= 65 • TIU >= 80 • TKP >= 166 (Total >= 311)";
     } else {
       const avgTwk = Math.round(sessionsChronological.reduce((a, b) => a + Number(b.twk || 0), 0) / sessionsChronological.length);
       const avgTiu = Math.round(sessionsChronological.reduce((a, b) => a + Number(b.tiu || 0), 0) / sessionsChronological.length);
@@ -274,11 +355,12 @@ function setTrendChartSeriesMode(mode) {
   }
 
   if (sessionsChronological.length < 2) {
+    const single = sessionsChronological[0];
     chartBox.innerHTML = `
       <div class="text-xs text-slate-500 text-center py-4">
-        ${sessionsChronological.length === 0
+        ${!single
           ? "Belum ada data ujian untuk menampilkan grafik tren."
-          : `Skor 1 sesi tercatat (${sessionsChronological[0].total} • TWK ${sessionsChronological[0].twk} | TIU ${sessionsChronological[0].tiu} | TKP ${sessionsChronological[0].tkp}). Selesaikan minimal 1 sesi lagi untuk melihat grafik tren perkembangan.`}
+          : `Skor 1 sesi tercatat (${single.total} • TWK ${single.twk} | TIU ${single.tiu} | TKP ${single.tkp}). Selesaikan minimal 1 sesi lagi untuk melihat grafik tren perkembangan.`}
       </div>
     `;
     return;
@@ -306,13 +388,9 @@ function setTrendChartSeriesMode(mode) {
     return padTop + plotHeight - (clamped / max) * plotHeight;
   };
 
-  const xLabelsHtml = sessionsChronological.map((s, idx) => {
+  const xLabelsHtml = sessionsChronological.map((_, idx) => {
     const x = getX(idx);
-    const tip = `#${idx + 1}: Total ${s.total} \vert{} TWK${s.twk} | TIU ${s.tiu} \vert{} TKP${s.tkp}`;
-    return `
-      <text x="${x.toFixed(1)}" y="${height - 5}" text-anchor="middle" font-size="9" fill="#64748b">#${idx + 1}</text>
-      <title>${escapeHtml(tip)}</title>
-    `;
+    return `<text x="${x.toFixed(1)}" y="${height - 5}" text-anchor="middle" font-size="9" fill="#64748b">#${idx + 1}</text>`;
   }).join("");
 
   const seriesSvgHtml = seriesMeta
@@ -323,26 +401,20 @@ function setTrendChartSeriesMode(mode) {
         return {
           x: getX(idx),
           y: getY(rawVal, sr.max),
-          val: rawVal,
-          session: s
+          val: rawVal
         };
       });
 
       const polylineStr = pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
       const showPointLabels = trendChartSeriesMode !== "ALL" || sr.key === "total";
 
-      const pointsHtml = pts.map((p, idx) => {
-        const s = p.session;
-        const hoverTitle = `Sesi #${idx + 1} (${s.nama || "Peserta"}) — Total: ${s.total} \vert{} TWK:${s.twk} | TIU: ${s.tiu} \vert{} TKP:${s.tkp}`;
+      const pointsHtml = pts.map(p => {
         const labelHtml = showPointLabels
           ? `<text x="${p.x.toFixed(1)}" y="${Math.max(10, p.y - 6).toFixed(1)}" text-anchor="middle" font-size="8.5" font-weight="bold" fill="${sr.color}">${p.val}</text>`
           : "";
         return `
-          <g>
-            <title>${escapeHtml(hoverTitle)}</title>
-            <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.5" fill="${sr.color}" stroke="#ffffff" stroke-width="1.3" />
-            ${labelHtml}
-          </g>
+          <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.5" fill="${sr.color}" stroke="#ffffff" stroke-width="1.3" />
+          ${labelHtml}
         `;
       }).join("");
 
@@ -355,21 +427,24 @@ function setTrendChartSeriesMode(mode) {
   const pgLineHtml = (trendChartSeriesMode === "ALL" || trendChartSeriesMode === "TOTAL")
     ? `
       <line x1="${padX}" y1="${pgY.toFixed(1)}" x2="${width - padX}" y2="${pgY.toFixed(1)}" stroke="#10b981" stroke-dasharray="4" stroke-width="1" />
-      <text x="${width - padX}" y="${(pgY - 3).toFixed(1)}" text-anchor="end" font-size="8" font-weight="bold" fill="#059669">PG Total ≥ 311</text>
+      <text x="${width - padX}" y="${(pgY - 3).toFixed(1)}" text-anchor="end" font-size="8" font-weight="bold" fill="#059669">PG Total >= 311</text>
     `
     : "";
 
   const latest = sessionsChronological[sessionsChronological.length - 1];
+  const btnCls = (m) => trendChartSeriesMode === m
+    ? "px-2 py-0.5 rounded text-[10px] font-bold bg-blue-600 text-white"
+    : "px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 hover:bg-slate-200";
 
   chartBox.innerHTML = `
     <div class="w-full space-y-1.5">
       <div class="flex flex-wrap items-center justify-between gap-1.5">
         <div class="flex flex-wrap items-center gap-1">
-          <button type="button" data-series="ALL" onclick="setTrendChartSeriesMode('ALL')" class="trend-series-btn px-2 py-0.5 rounded text-[10px] font-bold ${trendChartSeriesMode === "ALL" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}">Semua</button>
-          <button type="button" data-series="TOTAL" onclick="setTrendChartSeriesMode('TOTAL')" class="trend-series-btn px-2 py-0.5 rounded text-[10px] font-bold ${trendChartSeriesMode === "TOTAL" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}">Total</button>
-          <button type="button" data-series="TWK" onclick="setTrendChartSeriesMode('TWK')" class="trend-series-btn px-2 py-0.5 rounded text-[10px] font-bold ${trendChartSeriesMode === "TWK" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}">TWK</button>
-          <button type="button" data-series="TIU" onclick="setTrendChartSeriesMode('TIU')" class="trend-series-btn px-2 py-0.5 rounded text-[10px] font-bold ${trendChartSeriesMode === "TIU" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}">TIU</button>
-          <button type="button" data-series="TKP" onclick="setTrendChartSeriesMode('TKP')" class="trend-series-btn px-2 py-0.5 rounded text-[10px] font-bold ${trendChartSeriesMode === "TKP" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}">TKP</button>
+          <button type="button" onclick="setTrendChartSeriesMode('ALL')" class="${btnCls("ALL")}">Semua</button>
+          <button type="button" onclick="setTrendChartSeriesMode('TOTAL')" class="${btnCls("TOTAL")}">Total</button>
+          <button type="button" onclick="setTrendChartSeriesMode('TWK')" class="${btnCls("TWK")}">TWK</button>
+          <button type="button" onclick="setTrendChartSeriesMode('TIU')" class="${btnCls("TIU")}">TIU</button>
+          <button type="button" onclick="setTrendChartSeriesMode('TKP')" class="${btnCls("TKP")}">TKP</button>
         </div>
         <div class="text-[10px] font-semibold text-slate-600">
           Terakhir: <span class="text-blue-700 font-bold">Tot ${latest.total}</span> •
@@ -379,10 +454,11 @@ function setTrendChartSeriesMode(mode) {
         </div>
       </div>
 
-      <svg viewBox="0 0 ${width}${height}" class="w-full h-36">
+      <svg viewBox="0 0 ${width} ${height}" class="w-full h-36">
         <line x1="${padX}" y1="${padTop + plotHeight}" x2="${width - padX}" y2="${padTop + plotHeight}" stroke="#cbd5e1" stroke-width="1" />
         ${pgLineHtml}
-        ${seriesSvgHtml}${xLabelsHtml}
+        ${seriesSvgHtml}
+        ${xLabelsHtml}
       </svg>
 
       <div class="flex flex-wrap items-center justify-center gap-3 text-[10px] font-semibold text-slate-600">
@@ -459,7 +535,7 @@ async function openDashboard() {
 
 async function refreshDashboardData() {
   const infoEl = document.getElementById("dashboardSourceInfo");
-  infoEl.textContent = "Mengambil data rekap skor peserta...";
+  if (infoEl) infoEl.textContent = "Mengambil data rekap skor peserta...";
   updateRestoreHistoryButtons();
 
   const localRecords = getExamHistory().map(h => ({
@@ -478,7 +554,7 @@ async function refreshDashboardData() {
 
   if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("TEMPEL_URL")) {
     dashboardRecords = localRecords;
-    infoEl.textContent = `Status Koneksi: Lokal Saja • ${dashboardRecords.length} data di browser ini.`;
+    if (infoEl) infoEl.textContent = `Status Koneksi: Lokal Saja • ${dashboardRecords.length} data di browser ini.`;
     renderDashboardUserPreviousExams();
     renderUserScoreTrendChart();
     populateDashboardInstitutionFilter();
@@ -489,7 +565,7 @@ async function refreshDashboardData() {
   try {
     const res = await fetch(`${GOOGLE_SCRIPT_URL}?mode=rekap`);
     const json = await res.json();
-    if (json.status === "sukses" && Array.isArray(json.rekap) && json.rekap.length > 0) {
+    if (json && json.status === "sukses" && Array.isArray(json.rekap) && json.rekap.length > 0) {
       const reversedRekap = json.rekap.slice().reverse();
       dashboardRecords = reversedRekap;
 
@@ -506,14 +582,14 @@ async function refreshDashboardData() {
         localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(mapped.slice(0, 150)));
       }
 
-      infoEl.textContent = `Status Koneksi: Terhubung ke Google Sheets • ${dashboardRecords.length} data tercatat.`;
+      if (infoEl) infoEl.textContent = `Status Koneksi: Terhubung ke Google Sheets • ${dashboardRecords.length} data tercatat.`;
     } else {
       dashboardRecords = localRecords;
-      infoEl.textContent = `Status Koneksi: Lokal (${dashboardRecords.length} data tersimpan di browser).`;
+      if (infoEl) infoEl.textContent = `Status Koneksi: Lokal (${dashboardRecords.length} data tersimpan di browser).`;
     }
   } catch (err) {
     dashboardRecords = localRecords;
-    infoEl.textContent = `Status Koneksi: Cadangan Lokal / Offline (${dashboardRecords.length} data di browser).`;
+    if (infoEl) infoEl.textContent = `Status Koneksi: Cadangan Lokal / Offline (${dashboardRecords.length} data di browser).`;
   }
 
   renderDashboardUserPreviousExams();
@@ -543,7 +619,7 @@ function renderDashboardTable() {
       modeFilter === "ALL" ||
       (modeFilter === "FULL" && !modeStr.includes("fokus")) ||
       (modeFilter === "FOCUS" && modeStr.includes("fokus"));
-    const hay = `${rec.nama}${rec.formasi} ${rec.instansi}${rec.mode || ""}`.toLowerCase();
+    const hay = `${rec.nama} ${rec.formasi} ${rec.instansi} ${rec.mode || ""}`.toLowerCase();
     const matchText = !qText || hay.includes(qText);
     return matchPg && matchInst && matchMode && matchText;
   });
@@ -607,4 +683,11 @@ function renderDashboardTable() {
       <td class="py-2.5 px-3 text-center font-semibold">${rec.tiu}</td>
       <td class="py-2.5 px-3 text-center font-semibold">${rec.tkp}</td>
       <td class="py-2.5 px-3 text-center font-extrabold text-blue-700">${rec.total}</td>
-      <td class="py-
+      <td class="py-2.5 px-3 text-center">
+        <span class="text-xs font-bold px-2 py-0.5 rounded ${badgeClass}">${escapeHtml(rec.status_pg)}</span>
+      </td>
+      <td class="py-2.5 px-3 text-xs text-slate-500 whitespace-nowrap">${escapeHtml(formatShortDate(rec.waktu))}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
