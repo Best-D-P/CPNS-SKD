@@ -4,6 +4,7 @@ const SESSION_STORAGE_KEY = "cat_skd_active_session_v1";
 const AUTH_STORAGE_KEY = "cat_skd_logged_user_v1";
 const USERS_STORAGE_KEY = "cat_skd_registered_users_v1";
 const HISTORY_STORAGE_KEY = "cat_skd_exam_history_v1";
+const BACKUP_HISTORY_STORAGE_KEY = "cat_skd_exam_history_backup_v1";
 
 let questionBank = [];
 let reviewQuestions = [];
