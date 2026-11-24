@@ -486,4 +486,498 @@ function parseDeviceInfo() {
   else if (/Firefox\//i.test(ua)) browser = "Firefox";
   else if (/Safari\//i.test(ua) && !/Chrome\//i.test(ua)) browser = "Safari";
 
-  const isMobile = /Mobile|
+  const isMobile = /Mobile|Android|iPhone|iPad|iPod/i.test(ua);
+  const deviceType = isMobile ? "Mobile/Tablet" : "Desktop/Laptop";
+
+  return `${deviceType} • ${os} • ${browser} (${ua.slice(0, 120)})`;
+}
+
+function detectSuspiciousSubmission(payload) {
+  const warnings = checkInputAnomalyPreview(
+    String(payload.nama || "").trim(),
+    String(payload.formasi || "").trim(),
+    String(payload.instansi || "").trim()
+  );
+
+  const profanityHits = findProfanityInName(payload.nama);
+  if (profanityHits.length > 0) {
+    warnings.push(`Kata kasar/penghinaan pada nama (${profanityHits.join(", ")})`);
+  }
+
+  const formationHits = findProfanityInName(payload.formasi);
+  if (formationHits.length > 0) {
+    warnings.push(`Kata kasar/penghinaan pada formasi (${formationHits.join(", ")})`);
+  }
+
+  const institutionHits = findProfanityInName(payload.instansi);
+  if (institutionHits.length > 0) {
+    warnings.push(`Kata kasar/penghinaan pada instansi (${institutionHits.join(", ")})`);
+  }
+
+  if (
+    payload.twk < 0 || payload.twk > 150 ||
+    payload.tiu < 0 || payload.tiu > 175 ||
+    payload.tkp < 0 || payload.tkp > 225 ||
+    payload.total !== (payload.twk + payload.tiu + payload.tkp)
+  ) {
+    warnings.push("Skor tidak valid/tidak konsisten");
+  }
+
+  const elapsedSeconds = examStartedAt ? Math.floor((Date.now() - examStartedAt) / 1000) : 0;
+  const answeredCount = userAnswers.filter(a => a !== null).length;
+  if (answeredCount >= 20 && elapsedSeconds < 60) {
+    warnings.push(`Pengerjaan terlalu cepat (${elapsedSeconds} detik untuk ${answeredCount} soal)`);
+  }
+
+  const lastSubmitTime = Number(localStorage.getItem("lastCatSubmitAt") || "0");
+  const now = Date.now();
+  if (lastSubmitTime && now - lastSubmitTime < 15000) {
+    warnings.push("Pengiriman berulang kurang dari 15 detik");
+  }
+  localStorage.setItem("lastCatSubmitAt", String(now));
+
+  return warnings;
+}
+
+async function finishExam() {
+  clearInterval(timerInterval);
+  isExamActive = false;
+  clearExamSessionFromStorage();
+
+  let twkScore = 0;
+  let tiuScore = 0;
+  let tkpScore = 0;
+
+  questionBank.forEach((q, idx) => {
+    const ans = userAnswers[idx];
+    if (ans === null) return;
+    if (q.subtest === "TWK") {
+      if (ans === q.answer) twkScore += 5;
+    } else if (q.subtest === "TIU") {
+      if (ans === q.answer) tiuScore += 5;
+    } else if (q.subtest === "TKP") {
+      tkpScore += (q.scores && typeof q.scores[ans] === "number") ? q.scores[ans] : 0;
+    }
+  });
+
+  const totalScore = twkScore + tiuScore + tkpScore;
+  const passTWK = twkScore >= 65;
+  const passTIU = tiuScore >= 80;
+  const passTKP = tkpScore >= 166;
+  const overallPass = passTWK && passTIU && passTKP;
+  const statusPG = overallPass ? "LULUS PG" : "TIDAK LULUS PG";
+
+  document.getElementById("examScreen").classList.add("hidden");
+  document.getElementById("examHeaderControls").classList.add("hidden");
+  document.getElementById("examHeaderControls").classList.remove("flex");
+  document.getElementById("navHeaderControls").classList.remove("hidden");
+  document.getElementById("resultScreen").classList.remove("hidden");
+
+  const finishTimeLabel = new Date().toLocaleString("id-ID");
+  document.getElementById("resultParticipantTitle").textContent = `Hasil Ujian: ${participantName}`;
+  document.getElementById("resultFormationInfo").textContent = `${appliedFormation} • ${appliedInstitution}`;
+  document.getElementById("resultMetaInfo").textContent = `${examModeLabel} • Selesai pada ${finishTimeLabel}`;
+  document.getElementById("totalScoreDisplay").textContent = totalScore;
+
+  const statusBadge = document.getElementById("resultStatusBadge");
+  statusBadge.textContent = overallPass ? "MEMENUHI PASSING GRADE BKN" : "BELUM MEMENUHI PASSING GRADE";
+  statusBadge.className = `inline-block px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider mb-2 ${
+    overallPass ? "bg-emerald-500 text-white" : "bg-rose-500 text-white"
+  }`;
+
+  document.getElementById("twkScoreVal").textContent = twkScore;
+  document.getElementById("tiuScoreVal").textContent = tiuScore;
+  document.getElementById("tkpScoreVal").textContent = tkpScore;
+
+  setSubtestBadge("twkPassBadge", passTWK);
+  setSubtestBadge("tiuPassBadge", passTIU);
+  setSubtestBadge("tkpPassBadge", passTKP);
+
+  const focusNoteEl = document.getElementById("resultFocusTargetNote");
+  if (focusNoteEl) {
+    const lowerMode = String(examModeLabel || "").toLowerCase();
+    if (lowerMode.includes("fokus twk")) {
+      focusNoteEl.textContent = `Target PG Subtes TWK: ${twkScore}/65 (${passTWK ? "Tercapai" : "Belum Tercapai"}) — catatan ini khusus mode fokus subtes.`;
+      focusNoteEl.classList.remove("hidden");
+    } else if (lowerMode.includes("fokus tiu")) {
+      focusNoteEl.textContent = `Target PG Subtes TIU: ${tiuScore}/80 (${passTIU ? "Tercapai" : "Belum Tercapai"}) — catatan ini khusus mode fokus subtes.`;
+      focusNoteEl.classList.remove("hidden");
+    } else if (lowerMode.includes("fokus tkp")) {
+      focusNoteEl.textContent = `Target PG Subtes TKP: ${tkpScore}/166 (${passTKP ? "Tercapai" : "Belum Tercapai"}) — catatan ini khusus mode fokus subtes.`;
+      focusNoteEl.classList.remove("hidden");
+    } else {
+      focusNoteEl.textContent = "";
+      focusNoteEl.classList.add("hidden");
+    }
+  }
+
+  const syncStatusBox = document.getElementById("sheetSyncStatus");
+  const syncText = document.getElementById("sheetSyncText");
+  syncText.textContent = "Mendeteksi informasi perangkat, IP publik, dan memvalidasi data...";
+
+  const ipAddress = await getPublicIpAddress();
+  const deviceInfo = parseDeviceInfo();
+  const warnings = detectSuspiciousSubmission({
+    nama: participantName,
+    formasi: appliedFormation,
+    instansi: appliedInstitution,
+    twk: twkScore,
+    tiu: tiuScore,
+    tkp: tkpScore,
+    total: totalScore
+  });
+  const warningText = warnings.length > 0 ? `WARNING: ${warnings.join("; ")}` : "Normal";
+
+  const alertBox = document.getElementById("userAnomalyAlert");
+  const alertDetail = document.getElementById("userAnomalyDetail");
+
+  if (warnings.length > 0) {
+    syncStatusBox.className =
+      "px-6 py-3 bg-amber-50 border-b border-amber-200 text-xs font-medium text-amber-900 flex items-center justify-between gap-3";
+    if (alertBox && alertDetail) {
+      alertDetail.textContent =
+        `Aktivitas atau isian Anda terdeteksi tidak wajar (${warnings.join("; ")}). Informasi perangkat (${deviceInfo.split(" (")[0]}), alamat IP (${ipAddress}), dan status warning telah dicatat ke sistem rekap.`;
+      alertBox.classList.remove("hidden");
+    }
+  } else {
+    syncStatusBox.className =
+      "px-6 py-3 bg-blue-50 border-b border-blue-100 text-xs font-medium text-blue-800 flex items-center justify-between gap-3";
+    if (alertBox) alertBox.classList.add("hidden");
+  }
+
+  saveAttemptToHistory({
+    id: `att_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    nama: participantName,
+    formasi: appliedFormation,
+    instansi: appliedInstitution,
+    mode: examModeLabel,
+    twk: twkScore,
+    tiu: tiuScore,
+    tkp: tkpScore,
+    total: totalScore,
+    status_pg: statusPG,
+    warning: warningText,
+    waktuLabel: finishTimeLabel,
+    questions: questionBank.map(q => ({ ...q })),
+    answers: [...userAnswers]
+  });
+
+  reviewQuestions = questionBank.map(q => ({ ...q }));
+  reviewAnswers = [...userAnswers];
+  reviewMetaLabel = `Sesi Terbaru — ${participantName} (${finishTimeLabel})`;
+  updateRestoreHistoryButtons();
+  renderAttemptHistory();
+  renderDashboardUserPreviousExams();
+  renderUserScoreTrendChart();
+
+  lastExamPayload = {
+    action: "submit_score",
+    nama: participantName,
+    formasi: appliedFormation,
+    instansi: appliedInstitution,
+    mode: examModeLabel,
+    twk: twkScore,
+    tiu: tiuScore,
+    tkp: tkpScore,
+    total: totalScore,
+    status_pg: statusPG,
+    perangkat: deviceInfo,
+    ip_address: ipAddress,
+    warning: warningText
+  };
+
+  sendResultsToGoogleSheet(lastExamPayload);
+}
+
+function setSubtestBadge(elId, isPass) {
+  const el = document.getElementById(elId);
+  el.textContent = isPass ? "LULUS" : "TIDAK LULUS";
+  el.className = `text-xs font-bold px-2 py-0.5 rounded ${
+    isPass ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"
+  }`;
+}
+
+async function sendResultsToGoogleSheet(payload) {
+  if (isSubmittingScore) return;
+  isSubmittingScore = true;
+
+  const syncText = document.getElementById("sheetSyncText");
+  const retryBtn = document.getElementById("retrySyncBtn");
+  retryBtn.classList.add("hidden");
+
+  const hasWarning = payload.warning && payload.warning !== "Normal";
+
+  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("TEMPEL_URL")) {
+    syncText.textContent = "Info: URL Google Apps Script belum ditempel pada kode HTML, hasil hanya ditampilkan di layar ini.";
+    isSubmittingScore = false;
+    return;
+  }
+
+  syncText.textContent = hasWarning
+    ? `⚠️ Peringatan Data (${payload.warning}). Mengirim rekap nilai ke Google Sheets...`
+    : "Mengirim rekap nilai ke Google Sheets...";
+
+  try {
+    const res = await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const result = await res.json();
+    if (result && result.status === "sukses") {
+      const finalWarning = result.warning || payload.warning;
+      if (finalWarning && finalWarning !== "Normal") {
+        syncText.textContent =
+          `⚠️ Rekap nilai terkirim ke Google Sheets dengan catatan ${finalWarning}.`;
+      } else {
+        syncText.textContent =
+          "Rekap nilai, formasi, instansi, serta info perangkat & IP berhasil dikirim ke database Google Sheets!";
+      }
+    } else {
+      syncText.textContent = `Gagal menyimpan ke Google Sheets: ${(result && result.pesan) || "Respons tidak valid"}.`;
+      retryBtn.classList.remove("hidden");
+    }
+  } catch (err) {
+    syncText.textContent = "Gagal mengirim rekap nilai ke Google Sheets. Periksa koneksi internet Anda.";
+    retryBtn.classList.remove("hidden");
+  } finally {
+    isSubmittingScore = false;
+  }
+}
+
+function retrySendToSheet() {
+  if (lastExamPayload && !isSubmittingScore) sendResultsToGoogleSheet(lastExamPayload);
+}
+
+function toggleReviewSection() {
+  const sec = document.getElementById("reviewSection");
+  sec.classList.toggle("hidden");
+  if (!sec.classList.contains("hidden")) {
+    if (!reviewQuestions.length) {
+      reviewQuestions = questionBank;
+      reviewAnswers = userAnswers;
+    }
+    document.getElementById("reviewSectionTitle").textContent = "Pembahasan Lengkap Soal SKD";
+    document.getElementById("reviewSessionSubtitle").textContent = reviewMetaLabel;
+    renderReview("ALL");
+  }
+}
+
+function renderReviewSubtestStats(sourceQuestions, sourceAnswers) {
+  const statsEl = document.getElementById("reviewSubtestStats");
+  if (!statsEl) return;
+
+  let twkTotal = 0, twkCorrect = 0;
+  let tiuTotal = 0, tiuCorrect = 0;
+  let tkpTotal = 0, tkpPoints = 0;
+
+  sourceQuestions.forEach((q, idx) => {
+    const ans = sourceAnswers[idx] ?? null;
+    if (q.subtest === "TWK") {
+      twkTotal++;
+      if (ans !== null && ans === q.answer) twkCorrect++;
+    } else if (q.subtest === "TIU") {
+      tiuTotal++;
+      if (ans !== null && ans === q.answer) tiuCorrect++;
+    } else if (q.subtest === "TKP") {
+      tkpTotal++;
+      if (ans !== null && Array.isArray(q.scores)) {
+        tkpPoints += Number(q.scores[ans] || 0);
+      }
+    }
+  });
+
+  statsEl.innerHTML = `
+    <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
+      <div class="font-bold text-slate-700">TWK</div>
+      <div class="text-sm font-extrabold text-blue-700 mt-0.5">${twkCorrect} / ${twkTotal} Benar (${twkCorrect * 5} Poin)</div>
+    </div>
+    <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
+      <div class="font-bold text-slate-700">TIU</div>
+      <div class="text-sm font-extrabold text-blue-700 mt-0.5">${tiuCorrect} / ${tiuTotal} Benar (${tiuCorrect * 5} Poin)</div>
+    </div>
+    <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
+      <div class="font-bold text-slate-700">TKP (${tkpTotal} Soal)</div>
+      <div class="text-sm font-extrabold text-emerald-700 mt-0.5">Total ${tkpPoints} Poin</div>
+    </div>
+  `;
+}
+
+function renderReviewCategoryStats(sourceQuestions, sourceAnswers) {
+  const catBox = document.getElementById("reviewCategoryStats");
+  if (!catBox) return;
+
+  const map = new Map();
+  sourceQuestions.forEach((q, idx) => {
+    const cat = q.category || "Umum";
+    if (!map.has(cat)) {
+      map.set(cat, { subtest: q.subtest, total: 0, correct: 0, tkpPoints: 0 });
+    }
+    const entry = map.get(cat);
+    entry.total++;
+    const ans = sourceAnswers[idx] ?? null;
+    if (q.subtest === "TKP") {
+      if (ans !== null && Array.isArray(q.scores)) {
+        entry.tkpPoints += Number(q.scores[ans] || 0);
+      }
+    } else if (ans !== null && ans === q.answer) {
+      entry.correct++;
+    }
+  });
+
+  catBox.replaceChildren();
+  map.forEach((val, catName) => {
+    const card = document.createElement("div");
+    card.className = "bg-slate-50 border border-slate-200 rounded-lg px-3 py-2";
+    const metricText = val.subtest === "TKP"
+      ? `${val.tkpPoints} Poin (${val.total} soal)`
+      : `${val.correct}/${val.total} Benar (${Math.round((val.correct / Math.max(1, val.total)) * 100)}%)`;
+
+    card.innerHTML = `
+      <div class="text-[11px] font-bold text-slate-700">${escapeHtml(catName)} <span class="text-blue-700">(${escapeHtml(val.subtest)})</span></div>
+      <div class="text-xs font-extrabold text-slate-900 mt-0.5">${escapeHtml(metricText)}</div>
+    `;
+    catBox.appendChild(card);
+  });
+}
+
+function renderReview(filterSubtest) {
+  const list = document.getElementById("reviewList");
+  const letters = ["A", "B", "C", "D", "E"];
+  const sourceQuestions = reviewQuestions.length ? reviewQuestions : questionBank;
+  const sourceAnswers = reviewAnswers.length ? reviewAnswers : userAnswers;
+
+  renderReviewSubtestStats(sourceQuestions, sourceAnswers);
+  renderReviewCategoryStats(sourceQuestions, sourceAnswers);
+  list.replaceChildren();
+
+  sourceQuestions.forEach((q, idx) => {
+    if (filterSubtest !== "ALL" && q.subtest !== filterSubtest) return;
+
+    const userAns = sourceAnswers[idx] ?? null;
+    const card = document.createElement("div");
+    card.className =
+      "p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2";
+
+    const heading = document.createElement("div");
+    heading.className = "text-xs font-bold text-blue-700";
+    heading.textContent = `No. ${idx + 1} • ${q.subtest} (${q.category})`;
+
+    const answer = document.createElement("p");
+    answer.className = "text-xs";
+
+    if (q.subtest === "TKP") {
+      const points = userAns === null ? 0 : (q.scores?.[userAns] ?? 0);
+      const bestIndex = q.scores?.indexOf(5) ?? -1;
+      const bestAnswer =
+        bestIndex >= 0 ? letters[bestIndex] : "tidak tersedia";
+
+      answer.textContent =
+        `Jawaban Anda: ${
+          userAns === null
+            ? "Kosong (0 poin)"
+            : `${letters[userAns]} (${points} poin)`
+        } • Poin tertinggi: ${bestAnswer}`;
+    } else {
+      answer.textContent =
+        `Jawaban Anda: ${
+          userAns === null ? "Kosong" : letters[userAns]
+        } • Kunci benar: ${letters[q.answer]}`;
+    }
+
+    const question = document.createElement("p");
+    question.className = "text-sm text-slate-800 font-medium";
+    question.textContent = q.question;
+
+    const explanation = document.createElement("p");
+    explanation.className =
+      "text-xs text-slate-600 bg-white p-3 rounded-lg border border-slate-200";
+    explanation.textContent = `Pembahasan: ${q.explanation}`;
+
+    card.append(heading, answer, question, explanation);
+    list.appendChild(card);
+  });
+}
+
+window.addEventListener("beforeunload", (e) => {
+  if (isExamActive) {
+    saveExamSessionToStorage();
+    e.preventDefault();
+    e.returnValue = "Ujian simulasi CAT sedang berlangsung. Progres otomatis tersimpan jika halaman di-refresh.";
+    return e.returnValue;
+  }
+});
+
+window.addEventListener("keydown", (e) => {
+  if (!isExamActive) return;
+  const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : "";
+  if (activeTag === "input" || activeTag === "textarea" || activeTag === "select") return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+  const key = e.key.toUpperCase();
+  const optionMap = { A: 0, B: 1, C: 2, D: 3, E: 4 };
+  if (Object.prototype.hasOwnProperty.call(optionMap, key)) {
+    e.preventDefault();
+    selectOption(optionMap[key]);
+    return;
+  }
+
+  if (e.key === "ArrowLeft") {
+    e.preventDefault();
+    prevQuestion();
+  } else if (e.key === "ArrowRight") {
+    e.preventDefault();
+    saveAndNext();
+  }
+});
+
+window.addEventListener("DOMContentLoaded", () => {
+  loadLoggedUserFromStorage();
+  updateRestoreHistoryButtons();
+  renderAttemptHistory();
+  renderDashboardUserPreviousExams();
+  renderUserScoreTrendChart();
+
+  syncHistoryFromDatabaseIfEmpty().then((synced) => {
+    if (synced && synced.length > 0) {
+      renderAttemptHistory();
+      renderDashboardUserPreviousExams();
+      renderUserScoreTrendChart();
+    }
+  });
+
+  const nameInput = document.getElementById("participantNameInput");
+  if (nameInput) {
+    nameInput.addEventListener("input", () => {
+      validateNameInputRealtime();
+      renderDashboardUserPreviousExams();
+      renderUserScoreTrendChart();
+    });
+    nameInput.addEventListener("blur", validateNameInputRealtime);
+  }
+
+  const formationInput = document.getElementById("appliedFormationInput");
+  if (formationInput) {
+    formationInput.addEventListener("input", validateFormationInputRealtime);
+    formationInput.addEventListener("blur", validateFormationInputRealtime);
+  }
+
+  const institutionInput = document.getElementById("appliedInstitutionInput");
+  if (institutionInput) {
+    institutionInput.addEventListener("input", validateInstitutionInputRealtime);
+    institutionInput.addEventListener("blur", validateInstitutionInputRealtime);
+  }
+
+  if (!tryRestoreExamSession()) {
+    muatBankSoalDariSheet();
+  } else {
+    const badge = document.getElementById("scriptConfigBadge");
+    if (badge && GOOGLE_SCRIPT_URL) {
+      badge.textContent = "Terhubung ke Google Sheets";
+      badge.className = "font-semibold text-emerald-700";
+    }
+  }
+});
