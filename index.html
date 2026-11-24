@@ -42,6 +42,7 @@
       "https://script.google.com/macros/s/AKfycbwov2aAUu1cnJHSbGiy_a0u8C5YgP2iqDoU2HIxyXc85u8jNttVOamgwTt1xg89DbR2/exec";
     const SESSION_STORAGE_KEY = "cat_skd_active_session_v1";
     const AUTH_STORAGE_KEY = "cat_skd_logged_user_v1";
+    const USERS_STORAGE_KEY = "cat_skd_registered_users_v1";
     const HISTORY_STORAGE_KEY = "cat_skd_exam_history_v1";
   </script>
 
@@ -56,7 +57,6 @@
         </div>
       </div>
 
-      <!-- Tombol Navigasi Non-Ujian -->
       <div id="navHeaderControls" class="flex items-center gap-2">
         <button onclick="showScreen('setup')" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-100 text-xs font-semibold px-3 py-2 rounded-lg transition">
           Beranda Ujian
@@ -69,7 +69,6 @@
         </button>
       </div>
 
-      <!-- Kontrol Saat Ujian Berlangsung -->
       <div id="examHeaderControls" class="hidden items-center gap-3">
         <div class="hidden sm:block text-right">
           <div id="headerParticipantName" class="text-xs font-semibold text-slate-200"></div>
@@ -86,7 +85,7 @@
     </div>
   </header>
 
-  <!-- HALAMAN 1: LOGIN & KONFIGURASI PESERTA -->
+  <!-- HALAMAN 1: AKUN UNIK & KONFIGURASI PESERTA -->
   <main id="setupScreen" class="flex-1 max-w-5xl w-full mx-auto px-4 py-8 space-y-6">
     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
       <div class="bg-gradient-to-r from-blue-900 via-blue-800 to-slate-900 p-6 sm:p-8 text-white">
@@ -95,46 +94,117 @@
         </span>
         <h2 class="text-2xl sm:text-3xl font-extrabold mb-2">Computer Assisted Test (CAT) SKD CPNS</h2>
         <p class="text-sm text-blue-100 max-w-2xl">
-          Login peserta untuk menyimpan riwayat ujian sebelum & sesudah, mereview jawaban kapan saja, dan memantau dashboard skor seluruh peserta.
+          Daftar akun unik tersinkron ke Google Sheets, login berulang kapan saja, reset password jika lupa menggunakan kode pemulihan, dan pantau riwayat ujian serta seluruh skor peserta.
         </p>
       </div>
 
-      <!-- Kartu Login Peserta -->
-      <div id="loginCard" class="p-6 sm:p-8 border-b border-slate-200 bg-slate-50/70">
-        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+      <!-- Panel Akun: Daftar / Login / Reset Password -->
+      <div id="authCard" class="p-6 sm:p-8 border-b border-slate-200 bg-slate-50/70">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div>
-            <h3 class="text-base font-extrabold text-slate-800">Login Peserta Simulasi</h3>
-            <p class="text-xs text-slate-500">Masuk dengan Nama Lengkap dan PIN (4–8 digit) untuk mengelompokkan riwayat ujian Anda.</p>
+            <h3 class="text-base font-extrabold text-slate-800">Akun Peserta Unik (Google Sheets)</h3>
+            <p class="text-xs text-slate-500">Akun tersimpan di tab <strong>AkunPeserta</strong> sehingga bisa login lintas perangkat dan reset password jika lupa.</p>
           </div>
-          <span id="activeSessionBadge" class="hidden text-xs font-bold bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full"></span>
+          <div class="flex items-center gap-2">
+            <span id="activeSessionBadge" class="hidden text-xs font-bold bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full"></span>
+            <div class="inline-flex rounded-xl bg-slate-200 p-1 text-xs font-bold">
+              <button type="button" id="tabLoginBtn" onclick="switchAuthMode('login')" class="px-3 py-1.5 rounded-lg bg-white text-slate-900 shadow-sm">
+                Login
+              </button>
+              <button type="button" id="tabRegisterBtn" onclick="switchAuthMode('register')" class="px-3 py-1.5 rounded-lg text-slate-700">
+                Daftar Akun
+              </button>
+              <button type="button" id="tabResetBtn" onclick="switchAuthMode('reset')" class="px-3 py-1.5 rounded-lg text-slate-700">
+                Reset Password
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div id="loginFormGrid" class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+        <div id="loginModePanel" class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
           <div>
-            <label for="loginNameInput" class="block text-xs font-bold text-slate-700 mb-1.5">
-              Nama Lengkap Peserta <span class="text-rose-600">*</span>
+            <label for="loginUsernameInput" class="block text-xs font-bold text-slate-700 mb-1.5">
+              Nama Akun Unik <span class="text-rose-600">*</span>
             </label>
-            <input type="text" id="loginNameInput" placeholder="Contoh: Best D Pamungkas"
+            <input type="text" id="loginUsernameInput" placeholder="Masukkan nama akun Anda..."
               class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" />
           </div>
           <div>
-            <label for="loginPinInput" class="block text-xs font-bold text-slate-700 mb-1.5">
-              PIN Akses (Min. 4 Karakter) <span class="text-rose-600">*</span>
+            <label for="loginPasswordInput" class="block text-xs font-bold text-slate-700 mb-1.5">
+              Password <span class="text-rose-600">*</span>
             </label>
-            <input type="password" id="loginPinInput" maxlength="8" placeholder="Contoh: 1234"
+            <input type="password" id="loginPasswordInput" placeholder="Masukkan password..."
               class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" />
           </div>
           <div>
-            <button type="button" onclick="loginParticipant()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition">
-              Masuk / Daftar Peserta
+            <button type="button" onclick="handleLoginSubmit()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition">
+              Masuk ke Akun
             </button>
           </div>
         </div>
-        <p id="loginWarningText" class="hidden text-xs font-semibold text-rose-600 mt-2"></p>
+
+        <div id="registerModePanel" class="hidden grid-cols-1 sm:grid-cols-4 gap-4 items-end">
+          <div>
+            <label for="regUsernameInput" class="block text-xs font-bold text-slate-700 mb-1.5">
+              Nama Akun Unik <span class="text-rose-600">*</span>
+            </label>
+            <input type="text" id="regUsernameInput" placeholder="Contoh: Budiman Putra"
+              class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" />
+          </div>
+          <div>
+            <label for="regPasswordInput" class="block text-xs font-bold text-slate-700 mb-1.5">
+              Buat Password (Min. 4) <span class="text-rose-600">*</span>
+            </label>
+            <input type="password" id="regPasswordInput" placeholder="Minimal 4 karakter"
+              class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" />
+          </div>
+          <div>
+            <label for="regRecoveryInput" class="block text-xs font-bold text-slate-700 mb-1.5">
+              Kode Pemulihan (Min. 4) <span class="text-rose-600">*</span>
+            </label>
+            <input type="text" id="regRecoveryInput" placeholder="Untuk reset jika lupa"
+              class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" />
+          </div>
+          <div>
+            <button type="button" onclick="handleRegisterSubmit()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition">
+              Daftar Akun Baru
+            </button>
+          </div>
+        </div>
+
+        <div id="resetModePanel" class="hidden grid-cols-1 sm:grid-cols-4 gap-4 items-end">
+          <div>
+            <label for="resetUsernameInput" class="block text-xs font-bold text-slate-700 mb-1.5">
+              Nama Akun Terdaftar <span class="text-rose-600">*</span>
+            </label>
+            <input type="text" id="resetUsernameInput" placeholder="Nama akun Anda..."
+              class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" />
+          </div>
+          <div>
+            <label for="resetRecoveryInput" class="block text-xs font-bold text-slate-700 mb-1.5">
+              Kode Pemulihan <span class="text-rose-600">*</span>
+            </label>
+            <input type="text" id="resetRecoveryInput" placeholder="Kode saat pendaftaran"
+              class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" />
+          </div>
+          <div>
+            <label for="resetNewPasswordInput" class="block text-xs font-bold text-slate-700 mb-1.5">
+              Password Baru (Min. 4) <span class="text-rose-600">*</span>
+            </label>
+            <input type="password" id="resetNewPasswordInput" placeholder="Password pengganti"
+              class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" />
+          </div>
+          <div>
+            <button type="button" onclick="handleResetPasswordSubmit()" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition">
+              Simpan Password Baru
+            </button>
+          </div>
+        </div>
+
+        <p id="authFeedbackText" class="hidden text-xs font-semibold mt-2.5"></p>
       </div>
 
       <div class="p-6 sm:p-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <!-- Form Konfigurasi Ujian -->
         <div class="lg:col-span-2 space-y-5">
           <div>
             <label for="participantNameInput" class="block text-sm font-bold text-slate-700 mb-1.5">
@@ -194,7 +264,6 @@
           </div>
         </div>
 
-        <!-- Panel Ketentuan BKN -->
         <div class="bg-slate-50 rounded-xl p-5 border border-slate-200 space-y-4">
           <h3 class="font-bold text-sm text-slate-800 border-b border-slate-200 pb-2">Ketentuan Nilai Ambang Batas (BKN)</h3>
           <div class="space-y-2.5 text-xs">
@@ -240,7 +309,6 @@
   <!-- HALAMAN 2: RUANG UJIAN CAT -->
   <section id="examScreen" class="hidden flex-1 max-w-7xl w-full mx-auto px-4 py-6">
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-      <!-- Area Soal -->
       <div class="lg:col-span-8 bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-7 flex flex-col justify-between">
         <div>
           <div class="flex flex-wrap items-center justify-between gap-2 pb-4 mb-5 border-b border-slate-200">
@@ -271,7 +339,6 @@
         </div>
       </div>
 
-      <!-- Panel Navigasi Nomor -->
       <div class="lg:col-span-4 bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-col">
         <div class="flex items-center justify-between mb-3">
           <h3 class="font-bold text-sm text-slate-800">Navigasi Nomor Soal</h3>
@@ -316,13 +383,11 @@
         </div>
       </div>
 
-      <!-- Status Pengiriman ke Google Sheets -->
       <div id="sheetSyncStatus" class="px-6 py-3 bg-blue-50 border-b border-blue-100 text-xs font-medium text-blue-800 flex items-center justify-between gap-3">
         <span id="sheetSyncText">Menyiapkan pengiriman hasil ke Google Sheets...</span>
         <button onclick="retrySendToSheet()" id="retrySyncBtn" class="hidden underline font-bold shrink-0">Kirim Ulang</button>
       </div>
 
-      <!-- Kotak Peringatan Anomali untuk Pengakses -->
       <div id="userAnomalyAlert" class="hidden mx-6 mt-4 p-4 rounded-xl border border-amber-300 bg-amber-50 text-amber-900 text-xs sm:text-sm space-y-1">
         <div class="font-extrabold flex items-center gap-2">
           <span>⚠️ Peringatan Sistem Pemantauan (Anomali Terdeteksi)</span>
@@ -330,7 +395,6 @@
         <p id="userAnomalyDetail" class="text-xs text-amber-800 leading-relaxed"></p>
       </div>
 
-      <!-- Rincian Skor Subtes -->
       <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="border border-slate-200 rounded-xl p-4">
           <div class="flex justify-between items-center mb-1">
@@ -360,7 +424,6 @@
         </div>
       </div>
 
-      <!-- Riwayat Ujian Sebelum & Sesudah Peserta -->
       <div class="px-6 pb-4">
         <div class="border border-slate-200 rounded-xl p-4 bg-slate-50 space-y-3">
           <div class="flex flex-wrap items-center justify-between gap-2">
@@ -387,7 +450,6 @@
       </div>
     </div>
 
-    <!-- Pembahasan Soal -->
     <div id="reviewSection" class="hidden bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
       <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-3">
         <div>
@@ -425,7 +487,6 @@
         </button>
       </div>
 
-      <!-- Kartu Statistik -->
       <div class="p-6 grid grid-cols-2 lg:grid-cols-4 gap-4 border-b border-slate-200">
         <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
           <div class="text-xs font-semibold text-slate-500">Total Percobaan</div>
@@ -445,7 +506,6 @@
         </div>
       </div>
 
-      <!-- Filter Pencarian -->
       <div class="p-6 pb-3 flex flex-wrap items-center justify-between gap-3">
         <input type="text" id="dashboardSearchInput" oninput="renderDashboardTable()"
           placeholder="Cari nama peserta, formasi, atau instansi..."
@@ -458,7 +518,6 @@
         </select>
       </div>
 
-      <!-- Tabel Semua Skor -->
       <div class="px-6 pb-6 overflow-x-auto">
         <table class="w-full text-left border-collapse text-xs sm:text-sm">
           <thead>
@@ -860,7 +919,277 @@
     let dashboardRecords = [];
 
     // =========================================================================
-    // NAVIGASI LAYAR & LOGIN PESERTA
+    // MANAJEMEN AKUN UNIK (SINKRON GOOGLE SHEETS + FALLBACK LOKAL)
+    // =========================================================================
+    function normalizeAccountKey(rawName) {
+      return String(rawName || "").trim().replace(/\s+/g, " ").toLowerCase();
+    }
+
+    async function hashSecretValue(value) {
+      const clean = String(value || "");
+      if (window.crypto && window.crypto.subtle && window.TextEncoder) {
+        const buf = new TextEncoder().encode(clean);
+        const digest = await window.crypto.subtle.digest("SHA-256", buf);
+        return Array.from(new Uint8Array(digest))
+          .map(b => b.toString(16).padStart(2, "0"))
+          .join("");
+      }
+      let h = 2166136261;
+      for (let i = 0; i < clean.length; i++) {
+        h ^= clean.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+      }
+      return `fb_${(h >>> 0).toString(16)}`;
+    }
+
+    function getRegisteredUsers() {
+      try {
+        const raw = localStorage.getItem(USERS_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (err) {
+        return [];
+      }
+    }
+
+    function saveRegisteredUsers(users) {
+      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+    }
+
+    function showAuthFeedback(message, isError = false) {
+      const el = document.getElementById("authFeedbackText");
+      if (!el) return;
+      el.textContent = message;
+      el.className = `text-xs font-semibold mt-2.5 ${
+        isError ? "text-rose-600" : "text-emerald-700"
+      }`;
+      el.classList.remove("hidden");
+    }
+
+    function switchAuthMode(mode) {
+      const loginPanel = document.getElementById("loginModePanel");
+      const regPanel = document.getElementById("registerModePanel");
+      const resetPanel = document.getElementById("resetModePanel");
+
+      const tabLogin = document.getElementById("tabLoginBtn");
+      const tabReg = document.getElementById("tabRegisterBtn");
+      const tabReset = document.getElementById("tabResetBtn");
+
+      loginPanel.classList.toggle("hidden", mode !== "login");
+      regPanel.classList.toggle("hidden", mode !== "register");
+      regPanel.classList.toggle("grid", mode === "register");
+      resetPanel.classList.toggle("hidden", mode !== "reset");
+      resetPanel.classList.toggle("grid", mode === "reset");
+
+      const activeCls = "px-3 py-1.5 rounded-lg bg-white text-slate-900 shadow-sm";
+      const idleCls = "px-3 py-1.5 rounded-lg text-slate-700";
+
+      tabLogin.className = mode === "login" ? activeCls : idleCls;
+      tabReg.className = mode === "register" ? activeCls : idleCls;
+      tabReset.className = mode === "reset" ? activeCls : idleCls;
+
+      document.getElementById("authFeedbackText").classList.add("hidden");
+    }
+
+    async function postAuthToSheet(payload) {
+      if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("TEMPEL_URL")) {
+        return { offline: true };
+      }
+      const res = await fetch(GOOGLE_SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+      });
+      return await res.json();
+    }
+
+    async function handleRegisterSubmit() {
+      const rawName = document.getElementById("regUsernameInput").value.trim();
+      const passVal = document.getElementById("regPasswordInput").value;
+      const recVal = document.getElementById("regRecoveryInput").value.trim();
+
+      if (!rawName || rawName.length < 3) {
+        showAuthFeedback("Nama akun minimal 3 karakter.", true);
+        return;
+      }
+      if (findProfanityInName(rawName).length > 0) {
+        showAuthFeedback("Nama akun mengandung kata tidak sopan.", true);
+        return;
+      }
+      if (!passVal || passVal.length < 4) {
+        showAuthFeedback("Password minimal 4 karakter.", true);
+        return;
+      }
+      if (!recVal || recVal.length < 4) {
+        showAuthFeedback("Kode pemulihan minimal 4 karakter (diperlukan jika lupa password).", true);
+        return;
+      }
+
+      const key = normalizeAccountKey(rawName);
+      const users = getRegisteredUsers();
+      if (users.some(u => normalizeAccountKey(u.nama) === key)) {
+        showAuthFeedback(`Nama akun "${rawName}" sudah terdaftar. Silakan login atau gunakan nama akun unik lain.`, true);
+        return;
+      }
+
+      const passwordHash = await hashSecretValue(passVal);
+      const recoveryHash = await hashSecretValue(normalizeAccountKey(recVal));
+
+      try {
+        const remote = await postAuthToSheet({
+          action: "register",
+          nama: rawName,
+          nama_key: key,
+          password_hash: passwordHash,
+          recovery_hash: recoveryHash
+        });
+        if (remote && remote.status === "error") {
+          showAuthFeedback(remote.pesan || "Gagal mendaftarkan akun di Google Sheets.", true);
+          return;
+        }
+      } catch (err) {
+        console.warn("Sinkronisasi daftar akun ke Sheet gagal, menyimpan cadangan lokal.", err);
+      }
+
+      users.push({
+        id: `usr_${Date.now()}`,
+        nama: rawName,
+        passwordHash,
+        recoveryHash,
+        createdAt: new Date().toISOString()
+      });
+      saveRegisteredUsers(users);
+
+      loggedUser = { nama: rawName };
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(loggedUser));
+      document.getElementById("participantNameInput").value = rawName;
+      document.getElementById("regPasswordInput").value = "";
+      document.getElementById("regRecoveryInput").value = "";
+
+      applyLoggedUserToUI();
+      renderAttemptHistory();
+      showAuthFeedback(`Akun unik "${rawName}" berhasil didaftarkan dan tersinkron ke Google Sheets.`);
+    }
+
+    async function handleLoginSubmit() {
+      const rawName = document.getElementById("loginUsernameInput").value.trim();
+      const passVal = document.getElementById("loginPasswordInput").value;
+
+      if (!rawName || !passVal) {
+        showAuthFeedback("Masukkan nama akun dan password.", true);
+        return;
+      }
+
+      const key = normalizeAccountKey(rawName);
+      const inputHash = await hashSecretValue(passVal);
+
+      try {
+        const remote = await postAuthToSheet({
+          action: "login",
+          nama_key: key,
+          password_hash: inputHash
+        });
+        if (remote && remote.status === "sukses") {
+          const resolvedName = remote.nama || rawName;
+          loggedUser = { nama: resolvedName };
+          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(loggedUser));
+          document.getElementById("participantNameInput").value = resolvedName;
+          document.getElementById("loginPasswordInput").value = "";
+          applyLoggedUserToUI();
+          renderAttemptHistory();
+          showAuthFeedback(`Selamat datang kembali, ${resolvedName}.`);
+          return;
+        }
+        if (remote && remote.status === "error") {
+          showAuthFeedback(remote.pesan || "Nama akun atau password salah.", true);
+          return;
+        }
+      } catch (err) {
+        console.warn("Login ke Sheet gagal, memeriksa cache lokal.", err);
+      }
+
+      const users = getRegisteredUsers();
+      const found = users.find(u => normalizeAccountKey(u.nama) === key);
+      if (!found || inputHash !== found.passwordHash) {
+        showAuthFeedback("Nama akun atau password salah. Gunakan tab Reset Password jika lupa.", true);
+        return;
+      }
+
+      loggedUser = { nama: found.nama };
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(loggedUser));
+      document.getElementById("participantNameInput").value = found.nama;
+      document.getElementById("loginPasswordInput").value = "";
+      applyLoggedUserToUI();
+      renderAttemptHistory();
+      showAuthFeedback(`Selamat datang kembali, ${found.nama} (Mode Lokal).`);
+    }
+
+    async function handleResetPasswordSubmit() {
+      const rawName = document.getElementById("resetUsernameInput").value.trim();
+      const recVal = document.getElementById("resetRecoveryInput").value.trim();
+      const newPassVal = document.getElementById("resetNewPasswordInput").value;
+
+      if (!rawName || !recVal || !newPassVal) {
+        showAuthFeedback("Lengkapi nama akun, kode pemulihan, dan password baru.", true);
+        return;
+      }
+      if (newPassVal.length < 4) {
+        showAuthFeedback("Password baru minimal 4 karakter.", true);
+        return;
+      }
+
+      const key = normalizeAccountKey(rawName);
+      const recHash = await hashSecretValue(normalizeAccountKey(recVal));
+      const newPassHash = await hashSecretValue(newPassVal);
+      let syncedRemote = false;
+
+      try {
+        const remote = await postAuthToSheet({
+          action: "reset_password",
+          nama_key: key,
+          recovery_hash: recHash,
+          new_password_hash: newPassHash
+        });
+        if (remote && remote.status === "error") {
+          showAuthFeedback(remote.pesan || "Gagal reset password.", true);
+          return;
+        }
+        if (remote && remote.status === "sukses") {
+          syncedRemote = true;
+        }
+      } catch (err) {
+        console.warn("Reset password ke Sheet gagal, memeriksa cache lokal.", err);
+      }
+
+      const users = getRegisteredUsers();
+      const idx = users.findIndex(u => normalizeAccountKey(u.nama) === key);
+      if (!syncedRemote) {
+        if (idx === -1) {
+          showAuthFeedback("Nama akun tidak terdaftar.", true);
+          return;
+        }
+        if (recHash !== users[idx].recoveryHash) {
+          showAuthFeedback("Kode pemulihan tidak cocok dengan data pendaftaran.", true);
+          return;
+        }
+      }
+
+      if (idx !== -1) {
+        users[idx].passwordHash = newPassHash;
+        users[idx].updatedAt = new Date().toISOString();
+        saveRegisteredUsers(users);
+      }
+
+      const displayTarget = idx !== -1 ? users[idx].nama : rawName;
+      document.getElementById("resetRecoveryInput").value = "";
+      document.getElementById("resetNewPasswordInput").value = "";
+      document.getElementById("loginUsernameInput").value = displayTarget;
+      switchAuthMode("login");
+      showAuthFeedback(`Password untuk akun "${displayTarget}" berhasil direset. Silakan login dengan password baru.`);
+    }
+
+    // =========================================================================
+    // NAVIGASI LAYAR & SESI LOGIN
     // =========================================================================
     function showScreen(screenName) {
       if (isExamActive && screenName !== "exam") {
@@ -895,7 +1224,7 @@
         if (!raw) return;
         const parsed = JSON.parse(raw);
         if (parsed && parsed.nama) {
-          loggedUser = parsed;
+          loggedUser = { nama: parsed.nama };
           applyLoggedUserToUI();
         }
       } catch (err) {}
@@ -905,10 +1234,10 @@
       const badge = document.getElementById("activeSessionBadge");
       const logoutBtn = document.getElementById("logoutBtn");
       const nameInput = document.getElementById("participantNameInput");
-      const loginName = document.getElementById("loginNameInput");
+      const loginName = document.getElementById("loginUsernameInput");
 
       if (loggedUser && loggedUser.nama) {
-        badge.textContent = `Login: ${loggedUser.nama} (PIN: ${loggedUser.pin})`;
+        badge.textContent = `Akun Aktif: ${loggedUser.nama}`;
         badge.classList.remove("hidden");
         logoutBtn.classList.remove("hidden");
         if (nameInput && !nameInput.value.trim()) {
@@ -921,41 +1250,13 @@
       }
     }
 
-    function loginParticipant() {
-      const nameVal = document.getElementById("loginNameInput").value.trim();
-      const pinVal = document.getElementById("loginPinInput").value.trim();
-      const warnEl = document.getElementById("loginWarningText");
-
-      if (!nameVal || nameVal.length < 2) {
-        warnEl.textContent = "Masukkan nama peserta terlebih dahulu.";
-        warnEl.classList.remove("hidden");
-        return;
-      }
-      if (findProfanityInName(nameVal).length > 0) {
-        warnEl.textContent = "Nama mengandung kata tidak sopan.";
-        warnEl.classList.remove("hidden");
-        return;
-      }
-      if (!pinVal || pinVal.length < 4) {
-        warnEl.textContent = "PIN akses minimal 4 karakter.";
-        warnEl.classList.remove("hidden");
-        return;
-      }
-
-      warnEl.classList.add("hidden");
-      loggedUser = { nama: nameVal, pin: pinVal };
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(loggedUser));
-      document.getElementById("participantNameInput").value = nameVal;
-      applyLoggedUserToUI();
-      renderAttemptHistory();
-    }
-
     function logoutParticipant() {
-      if (!confirm("Keluar dari akun peserta saat ini?")) return;
+      if (!confirm("Keluar dari sesi login saat ini?")) return;
       loggedUser = null;
       localStorage.removeItem(AUTH_STORAGE_KEY);
       applyLoggedUserToUI();
       renderAttemptHistory();
+      showAuthFeedback("Anda telah keluar dari sesi login.");
     }
 
     // =========================================================================
@@ -980,7 +1281,7 @@
     function renderAttemptHistory() {
       const allHistory = getExamHistory();
       const filtered = loggedUser && loggedUser.nama
-        ? allHistory.filter(item => String(item.nama || "").toLowerCase() === loggedUser.nama.toLowerCase())
+        ? allHistory.filter(item => normalizeAccountKey(item.nama) === normalizeAccountKey(loggedUser.nama))
         : allHistory;
 
       const listEl = document.getElementById("attemptHistoryList");
@@ -1052,7 +1353,6 @@
       const localRecords = getExamHistory().map(h => ({
         waktu: h.waktuLabel || "-",
         nama: h.nama || "Peserta",
-        pin: h.pin || "-",
         formasi: h.formasi || "-",
         instansi: h.instansi || "-",
         mode: h.mode || "-",
@@ -1775,9 +2075,6 @@
       }
     }
 
-    // =========================================================================
-    // NAVIGASI KEYBOARD SAAT UJIAN AKTIF (A-E, ARROWLEFT, ARROWRIGHT)
-    // =========================================================================
     window.addEventListener("keydown", (e) => {
       if (!isExamActive) return;
       const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : "";
@@ -1852,9 +2149,6 @@
       }
     }
 
-    // =========================================================================
-    // DETEKSI PERANGKAT, IP PUBLIK & VALIDASI DATA ANEH (WARNING)
-    // =========================================================================
     async function getPublicIpAddress() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 2500);
@@ -2030,12 +2324,9 @@
         if (alertBox) alertBox.classList.add("hidden");
       }
 
-      const activePin = loggedUser && loggedUser.pin ? loggedUser.pin : "-";
-
       saveAttemptToHistory({
         id: `att_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
         nama: participantName,
-        pin: activePin,
         formasi: appliedFormation,
         instansi: appliedInstitution,
         mode: examModeLabel,
@@ -2056,8 +2347,8 @@
       renderAttemptHistory();
 
       lastExamPayload = {
+        action: "submit_score",
         nama: participantName,
-        pin: activePin,
         formasi: appliedFormation,
         instansi: appliedInstitution,
         mode: examModeLabel,
@@ -2082,9 +2373,6 @@
       }`;
     }
 
-    // =========================================================================
-    // PENGIRIMAN DATA SKOR KE GOOGLE APPS SCRIPT (GOOGLE SHEETS)
-    // =========================================================================
     async function sendResultsToGoogleSheet(payload) {
       const syncText = document.getElementById("sheetSyncText");
       const retryBtn = document.getElementById("retrySyncBtn");
@@ -2197,9 +2485,6 @@
       });
     }
 
-    // =========================================================================
-    // PENGAMBILAN BANK SOAL DINAMIS DARI GOOGLE SHEETS (doGet)
-    // =========================================================================
     async function muatBankSoalDariSheet() {
       const badge = document.getElementById("scriptConfigBadge");
       const statusEl = document.getElementById("bankLoadStatus");
