@@ -409,6 +409,7 @@
           <h2 id="resultParticipantTitle" class="text-2xl font-extrabold">Hasil Simulasi CAT SKD CPNS</h2>
           <p id="resultFormationInfo" class="text-xs sm:text-sm text-amber-300 font-semibold mt-1"></p>
           <p id="resultMetaInfo" class="text-xs text-slate-400 mt-1.5"></p>
+          <p id="resultFocusTargetNote" class="hidden text-xs text-emerald-300 font-semibold mt-1"></p>
         </div>
         <div class="bg-white/10 backdrop-blur px-6 py-4 rounded-2xl text-center border border-white/15">
           <div class="text-xs uppercase tracking-wider text-slate-300">Total Skor SKD</div>
@@ -466,6 +467,9 @@
               <p class="text-[11px] text-slate-500">Bandingkan perkembangan skor dan buka pembahasan tiap sesi ujian.</p>
             </div>
             <div class="flex items-center gap-2">
+              <button type="button" onclick="exportLocalHistoryToCsv()" class="text-xs font-bold text-blue-700 hover:underline">
+                Unduh Riwayat (CSV)
+              </button>
               <button type="button" onclick="clearLocalExamHistory()" class="text-xs font-bold text-rose-700 hover:underline">
                 Hapus Riwayat Lokal
               </button>
@@ -577,10 +581,16 @@
         <div class="flex flex-wrap items-center gap-2.5">
           <input type="text" id="dashboardSearchInput" oninput="renderDashboardTable()"
             placeholder="Cari nama peserta, formasi, atau instansi..."
-            class="w-full sm:w-64 px-3.5 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:ring-2 focus:ring-blue-600 outline-none" />
+            class="w-full sm:w-56 px-3.5 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:ring-2 focus:ring-blue-600 outline-none" />
           <select id="dashboardFilterInstansi" onchange="renderDashboardTable()"
             class="px-3.5 py-2 rounded-xl border border-slate-300 bg-white text-xs sm:text-sm font-medium focus:ring-2 focus:ring-blue-600 outline-none">
             <option value="ALL">Semua Instansi</option>
+          </select>
+          <select id="dashboardFilterMode" onchange="renderDashboardTable()"
+            class="px-3.5 py-2 rounded-xl border border-slate-300 bg-white text-xs sm:text-sm font-medium focus:ring-2 focus:ring-blue-600 outline-none">
+            <option value="ALL">Semua Mode</option>
+            <option value="FULL">Paket Lengkap</option>
+            <option value="FOCUS">Fokus Subtes</option>
           </select>
           <select id="dashboardFilterPg" onchange="renderDashboardTable()"
             class="px-3.5 py-2 rounded-xl border border-slate-300 bg-white text-xs sm:text-sm font-medium focus:ring-2 focus:ring-blue-600 outline-none">
@@ -630,6 +640,7 @@
       </div>
 
       <div id="reviewSubtestStats" class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs"></div>
+      <div id="reviewCategoryStats" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5"></div>
 
       <div id="reviewList" class="space-y-4 max-h-[650px] overflow-y-auto custom-scroll pr-2"></div>
     </div>
@@ -639,10 +650,10 @@
     Simulasi CAT SKD CPNS BKN • Dibuat oleh <strong class="text-slate-700">Best D Pamungkas</strong>
   </footer>
 
-  <script src="js/config.js"></script>
-  <script src="js/questions.js"></script>
-  <script src="js/auth.js"></script>
-  <script src="js/dashboard.js"></script>
-  <script src="js/exam.js"></script>
+  <script src="js/config.js?v=2"></script>
+  <script src="js/questions.js?v=2"></script>
+  <script src="js/auth.js?v=2"></script>
+  <script src="js/dashboard.js?v=2"></script>
+  <script src="js/exam.js?v=2"></script>
 </body>
 </html>
