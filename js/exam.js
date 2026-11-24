@@ -279,14 +279,32 @@ function startExam(customWeakQuestions = null) {
       const twk = buildSubtestQuota("TWK", 30);
       const tiu = buildSubtestQuota("TIU", 35);
       const tkp = buildSubtestQuota("TKP", 45);
+let activeMinutes = durationMinutes;
 
+  if (focusMode === "TWK") {
+    activeMinutes = isDisability ? 33 : 25;
+    examModeLabel = `${isDisability ? "Disabilitas" : "Reguler"} • Fokus TWK (${activeMinutes} Menit, 30 Soal)`;
+  } else if (focusMode === "TIU") {
+    activeMinutes = isDisability ? 52 : 40;
+    examModeLabel = `${isDisability ? "Disabilitas" : "Reguler"} • Fokus TIU (${activeMinutes} Menit, 35 Soal)`;
+  } else if (focusMode === "TKP") {
+    activeMinutes = isDisability ? 45 : 35;
+    examModeLabel = `${isDisability ? "Disabilitas" : "Reguler"} • Fokus TKP (${activeMinutes} Menit, 45 Soal)`;
+  }
+
+  remainingSeconds = activeMinutes * 60;
+  examEndTime = Date.now() + remainingSeconds * 1000;
       questionBank = [...twk, ...tiu, ...tkp].map((item, idx) => ({
         ...item,
         id: idx + 1
       }));
     }
   }
-
+const durationMinutes = parseInt(document.getElementById("durationSelect").value, 10);
+  const orderMode = document.getElementById("orderSelect").value;
+  const focusMode = document.getElementById("subtestFocusSelect")?.value || "ALL";
+  const isDisability = durationMinutes === 130;
+  examModeLabel = isDisability ? "Disabilitas (130 Menit)" : "Reguler (100 Menit)";
   userAnswers = new Array(questionBank.length).fill(null);
   doubtFlags = new Array(questionBank.length).fill(false);
   questionDurations = new Array(questionBank.length).fill(0);
