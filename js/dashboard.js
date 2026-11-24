@@ -1,4 +1,5 @@
-let trendChartSeriesMode = "ALL";
+let fullTrendSeriesMode = "ALL";
+let focusTrendSeriesMode = "ALL";
 
 function formatShortDate(raw) {
   if (!raw) return "-";
@@ -11,6 +12,11 @@ function formatShortDate(raw) {
     hour: "2-digit",
     minute: "2-digit"
   });
+}
+
+function isFocusOrDrillMode(modeStr) {
+  const m = String(modeStr || "").toLowerCase();
+  return m.includes("fokus") || m.includes("ulangi");
 }
 
 function getActiveUserFilterName() {
@@ -326,60 +332,45 @@ function renderDashboardUserPreviousExams() {
   });
 }
 
-function setTrendChartSeriesMode(mode) {
-  trendChartSeriesMode = mode || "ALL";
+function setFullTrendSeriesMode(mode) {
+  fullTrendSeriesMode = mode || "ALL";
   renderUserScoreTrendChart();
 }
 
-function renderUserScoreTrendChart() {
-  const chartBox = document.getElementById("userScoreTrendChart");
-  const badgeEl = document.getElementById("trendChartBadge");
-  const pgSummaryEl = document.getElementById("trendPgSummary");
-  if (!chartBox || !badgeEl) return;
+function setFocusTrendSeriesMode(mode) {
+  focusTrendSeriesMode = mode || "ALL";
+  renderUserScoreTrendChart();
+}
 
-  const sessionsChronological = getFilteredUserSessions().slice().reverse();
-  badgeEl.textContent = `${sessionsChronological.length} Sesi`;
-
-  if (pgSummaryEl) {
-    if (sessionsChronological.length === 0) {
-      pgSummaryEl.textContent = "PG Acuan: TWK >= 65 • TIU >= 80 • TKP >= 166 (Total >= 311)";
-    } else {
-      const avgTwk = Math.round(sessionsChronological.reduce((a, b) => a + Number(b.twk || 0), 0) / sessionsChronological.length);
-      const avgTiu = Math.round(sessionsChronological.reduce((a, b) => a + Number(b.tiu || 0), 0) / sessionsChronological.length);
-      const avgTkp = Math.round(sessionsChronological.reduce((a, b) => a + Number(b.tkp || 0), 0) / sessionsChronological.length);
-      pgSummaryEl.textContent =
-        `Rata-rata Anda — TWK: ${avgTwk}/65 (${avgTwk >= 65 ? "Aman" : "Kurang"}) • ` +
-        `TIU: ${avgTiu}/80 (${avgTiu >= 80 ? "Aman" : "Kurang"}) • ` +
-        `TKP: ${avgTkp}/166 (${avgTkp >= 166 ? "Aman" : "Kurang"})`;
-    }
-  }
+function renderSingleTrendGroup(containerEl, sessionsChronological, seriesMode, onSelectFnName, showPgLine, emptyText) {
+  if (!containerEl) return;
 
   if (sessionsChronological.length < 2) {
     const single = sessionsChronological[0];
-    chartBox.innerHTML = `
+    containerEl.innerHTML = `
       <div class="text-xs text-slate-500 text-center py-4">
         ${!single
-          ? "Belum ada data ujian untuk menampilkan grafik tren."
-          : `Skor 1 sesi tercatat (${single.total} • TWK ${single.twk} | TIU ${single.tiu} | TKP ${single.tkp}). Selesaikan minimal 1 sesi lagi untuk melihat grafik tren perkembangan.`}
+          ? emptyText
+          : `1 sesi tercatat (Tot ${single.total} • TWK ${single.twk} | TIU ${single.tiu} | TKP ${single.tkp}). Tambah 1 sesi lagi untuk grafik tren.`}
       </div>
     `;
     return;
   }
 
-  const width = 440;
-  const height = 145;
-  const padX = 30;
-  const padTop = 18;
-  const padBottom = 22;
+  const width = 420;
+  const height = 135;
+  const padX = 28;
+  const padTop = 16;
+  const padBottom = 20;
   const plotHeight = height - padTop - padBottom;
   const totalPgThreshold = 311;
   const pgY = padTop + plotHeight - (totalPgThreshold / 550) * plotHeight;
 
   const seriesMeta = [
-    { key: "total", label: "Total", max: 550, color: "#2563eb", show: trendChartSeriesMode === "ALL" || trendChartSeriesMode === "TOTAL" },
-    { key: "twk", label: "TWK", max: 150, color: "#7c3aed", show: trendChartSeriesMode === "ALL" || trendChartSeriesMode === "TWK" },
-    { key: "tiu", label: "TIU", max: 175, color: "#0d9488", show: trendChartSeriesMode === "ALL" || trendChartSeriesMode === "TIU" },
-    { key: "tkp", label: "TKP", max: 225, color: "#ea580c", show: trendChartSeriesMode === "ALL" || trendChartSeriesMode === "TKP" }
+    { key: "total", max: 550, color: "#2563eb", show: seriesMode === "ALL" || seriesMode === "TOTAL" },
+    { key: "twk", max: 150, color: "#7c3aed", show: seriesMode === "ALL" || seriesMode === "TWK" },
+    { key: "tiu", max: 175, color: "#0d9488", show: seriesMode === "ALL" || seriesMode === "TIU" },
+    { key: "tkp", max: 225, color: "#ea580c", show: seriesMode === "ALL" || seriesMode === "TKP" }
   ];
 
   const getX = (idx) => padX + (idx / (sessionsChronological.length - 1)) * (width - padX * 2);
@@ -390,7 +381,7 @@ function renderUserScoreTrendChart() {
 
   const xLabelsHtml = sessionsChronological.map((_, idx) => {
     const x = getX(idx);
-    return `<text x="${x.toFixed(1)}" y="${height - 5}" text-anchor="middle" font-size="9" fill="#64748b">#${idx + 1}</text>`;
+    return `<text x="${x.toFixed(1)}" y="${height - 4}" text-anchor="middle" font-size="8.5" fill="#64748b">#${idx + 1}</text>`;
   }).join("");
 
   const seriesSvgHtml = seriesMeta
@@ -406,45 +397,45 @@ function renderUserScoreTrendChart() {
       });
 
       const polylineStr = pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-      const showPointLabels = trendChartSeriesMode !== "ALL" || sr.key === "total";
+      const showPointLabels = seriesMode !== "ALL" || sr.key === "total";
 
       const pointsHtml = pts.map(p => {
         const labelHtml = showPointLabels
-          ? `<text x="${p.x.toFixed(1)}" y="${Math.max(10, p.y - 6).toFixed(1)}" text-anchor="middle" font-size="8.5" font-weight="bold" fill="${sr.color}">${p.val}</text>`
+          ? `<text x="${p.x.toFixed(1)}" y="${Math.max(10, p.y - 5).toFixed(1)}" text-anchor="middle" font-size="8" font-weight="bold" fill="${sr.color}">${p.val}</text>`
           : "";
         return `
-          <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.5" fill="${sr.color}" stroke="#ffffff" stroke-width="1.3" />
+          <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.2" fill="${sr.color}" stroke="#ffffff" stroke-width="1.2" />
           ${labelHtml}
         `;
       }).join("");
 
       return `
-        <polyline fill="none" stroke="${sr.color}" stroke-width="${sr.key === "total" ? "2.4" : "1.8"}" points="${polylineStr}" />
+        <polyline fill="none" stroke="${sr.color}" stroke-width="${sr.key === "total" ? "2.2" : "1.7"}" points="${polylineStr}" />
         ${pointsHtml}
       `;
     }).join("");
 
-  const pgLineHtml = (trendChartSeriesMode === "ALL" || trendChartSeriesMode === "TOTAL")
+  const pgLineHtml = showPgLine && (seriesMode === "ALL" || seriesMode === "TOTAL")
     ? `
       <line x1="${padX}" y1="${pgY.toFixed(1)}" x2="${width - padX}" y2="${pgY.toFixed(1)}" stroke="#10b981" stroke-dasharray="4" stroke-width="1" />
-      <text x="${width - padX}" y="${(pgY - 3).toFixed(1)}" text-anchor="end" font-size="8" font-weight="bold" fill="#059669">PG Total >= 311</text>
+      <text x="${width - padX}" y="${(pgY - 3).toFixed(1)}" text-anchor="end" font-size="7.5" font-weight="bold" fill="#059669">PG >= 311</text>
     `
     : "";
 
   const latest = sessionsChronological[sessionsChronological.length - 1];
-  const btnCls = (m) => trendChartSeriesMode === m
-    ? "px-2 py-0.5 rounded text-[10px] font-bold bg-blue-600 text-white"
-    : "px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 hover:bg-slate-200";
+  const btnCls = (m) => seriesMode === m
+    ? "px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-600 text-white"
+    : "px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 hover:bg-slate-200";
 
-  chartBox.innerHTML = `
-    <div class="w-full space-y-1.5">
-      <div class="flex flex-wrap items-center justify-between gap-1.5">
+  containerEl.innerHTML = `
+    <div class="w-full space-y-1">
+      <div class="flex flex-wrap items-center justify-between gap-1">
         <div class="flex flex-wrap items-center gap-1">
-          <button type="button" onclick="setTrendChartSeriesMode('ALL')" class="${btnCls("ALL")}">Semua</button>
-          <button type="button" onclick="setTrendChartSeriesMode('TOTAL')" class="${btnCls("TOTAL")}">Total</button>
-          <button type="button" onclick="setTrendChartSeriesMode('TWK')" class="${btnCls("TWK")}">TWK</button>
-          <button type="button" onclick="setTrendChartSeriesMode('TIU')" class="${btnCls("TIU")}">TIU</button>
-          <button type="button" onclick="setTrendChartSeriesMode('TKP')" class="${btnCls("TKP")}">TKP</button>
+          <button type="button" onclick="${onSelectFnName}('ALL')" class="${btnCls("ALL")}">Semua</button>
+          <button type="button" onclick="${onSelectFnName}('TOTAL')" class="${btnCls("TOTAL")}">Total</button>
+          <button type="button" onclick="${onSelectFnName}('TWK')" class="${btnCls("TWK")}">TWK</button>
+          <button type="button" onclick="${onSelectFnName}('TIU')" class="${btnCls("TIU")}">TIU</button>
+          <button type="button" onclick="${onSelectFnName}('TKP')" class="${btnCls("TKP")}">TKP</button>
         </div>
         <div class="text-[10px] font-semibold text-slate-600">
           Terakhir: <span class="text-blue-700 font-bold">Tot ${latest.total}</span> •
@@ -454,14 +445,14 @@ function renderUserScoreTrendChart() {
         </div>
       </div>
 
-      <svg viewBox="0 0 ${width} ${height}" class="w-full h-36">
+      <svg viewBox="0 0 ${width} ${height}" class="w-full h-32">
         <line x1="${padX}" y1="${padTop + plotHeight}" x2="${width - padX}" y2="${padTop + plotHeight}" stroke="#cbd5e1" stroke-width="1" />
         ${pgLineHtml}
         ${seriesSvgHtml}
         ${xLabelsHtml}
       </svg>
 
-      <div class="flex flex-wrap items-center justify-center gap-3 text-[10px] font-semibold text-slate-600">
+      <div class="flex flex-wrap items-center justify-center gap-2.5 text-[10px] font-semibold text-slate-600">
         <span class="inline-flex items-center gap-1"><span class="w-2.5 h-0.5 bg-blue-600 inline-block"></span> Total</span>
         <span class="inline-flex items-center gap-1"><span class="w-2.5 h-0.5 bg-violet-600 inline-block"></span> TWK</span>
         <span class="inline-flex items-center gap-1"><span class="w-2.5 h-0.5 bg-teal-600 inline-block"></span> TIU</span>
@@ -469,6 +460,52 @@ function renderUserScoreTrendChart() {
       </div>
     </div>
   `;
+}
+
+function renderUserScoreTrendChart() {
+  const fullBox = document.getElementById("userFullTrendChart");
+  const focusBox = document.getElementById("userFocusTrendChart");
+  const fullBadge = document.getElementById("fullTrendBadge");
+  const focusBadge = document.getElementById("focusTrendBadge");
+  const pgSummaryEl = document.getElementById("trendPgSummary");
+  if (!fullBox && !focusBox) return;
+
+  const userSessions = getFilteredUserSessions().slice().reverse();
+  const fullSessions = userSessions.filter(s => !isFocusOrDrillMode(s.mode));
+  const focusSessions = userSessions.filter(s => isFocusOrDrillMode(s.mode));
+
+  if (fullBadge) fullBadge.textContent = `${fullSessions.length} Sesi`;
+  if (focusBadge) focusBadge.textContent = `${focusSessions.length} Sesi`;
+
+  if (pgSummaryEl) {
+    if (userSessions.length === 0) {
+      pgSummaryEl.textContent = "PG Acuan: TWK >= 65 • TIU >= 80 • TKP >= 166 (Total >= 311)";
+    } else {
+      const avgTwk = Math.round(userSessions.reduce((a, b) => a + Number(b.twk || 0), 0) / userSessions.length);
+      const avgTiu = Math.round(userSessions.reduce((a, b) => a + Number(b.tiu || 0), 0) / userSessions.length);
+      const avgTkp = Math.round(userSessions.reduce((a, b) => a + Number(b.tkp || 0), 0) / userSessions.length);
+      pgSummaryEl.textContent =
+        `Rata-rata — TWK: ${avgTwk}/65 • TIU: ${avgTiu}/80 • TKP: ${avgTkp}/166`;
+    }
+  }
+
+  renderSingleTrendGroup(
+    fullBox,
+    fullSessions,
+    fullTrendSeriesMode,
+    "setFullTrendSeriesMode",
+    true,
+    "Belum ada sesi paket lengkap untuk grafik tren."
+  );
+
+  renderSingleTrendGroup(
+    focusBox,
+    focusSessions,
+    focusTrendSeriesMode,
+    "setFocusTrendSeriesMode",
+    false,
+    "Belum ada sesi fokus subtes / ulangi soal untuk grafik tren."
+  );
 }
 
 function populateDashboardInstitutionFilter() {
@@ -614,11 +651,11 @@ function renderDashboardTable() {
     }
     const matchPg = pgFilter === "ALL" || rec.status_pg === pgFilter;
     const matchInst = instFilter === "ALL" || String(rec.instansi || "").trim() === instFilter;
-    const modeStr = String(rec.mode || "").toLowerCase();
+    const isFocus = isFocusOrDrillMode(rec.mode);
     const matchMode =
       modeFilter === "ALL" ||
-      (modeFilter === "FULL" && !modeStr.includes("fokus")) ||
-      (modeFilter === "FOCUS" && modeStr.includes("fokus"));
+      (modeFilter === "FULL" && !isFocus) ||
+      (modeFilter === "FOCUS" && isFocus);
     const hay = `${rec.nama} ${rec.formasi} ${rec.instansi} ${rec.mode || ""}`.toLowerCase();
     const matchText = !qText || hay.includes(qText);
     return matchPg && matchInst && matchMode && matchText;
@@ -670,7 +707,7 @@ function renderDashboardTable() {
     const youBadge = isCurrentUserRow
       ? `<span class="ml-1 inline-block text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">Anda</span>`
       : "";
-    const focusTag = String(rec.mode || "").toLowerCase().includes("fokus")
+    const focusTag = isFocusOrDrillMode(rec.mode)
       ? `<span class="ml-1 inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">Fokus</span>`
       : "";
 
