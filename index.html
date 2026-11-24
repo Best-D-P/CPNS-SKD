@@ -30,6 +30,22 @@
       background: #cbd5e1;
       border-radius: 9999px;
     }
+
+    @media print {
+      header,
+      footer,
+      .no-print {
+        display: none !important;
+      }
+
+      body {
+        background: #ffffff !important;
+      }
+
+      #resultScreen {
+        padding: 0 !important;
+      }
+    }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
@@ -102,7 +118,6 @@
 
       <!-- Panel Akun: Daftar / Login / Reset Password via Email -->
       <div id="authCard" class="p-6 sm:p-8 border-b border-slate-200 bg-slate-50/70">
-        <!-- Ringkasan Setelah Login (Form Input Akun Disembunyikan) -->
         <div id="loggedInAccountBanner" class="hidden bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <div class="text-xs font-extrabold text-emerald-900">Anda Sudah Login</div>
@@ -113,7 +128,6 @@
           </button>
         </div>
 
-        <!-- Form Input Akun (Tampil Saat Belum Login) -->
         <div id="authFormsContainer">
           <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
             <div>
@@ -136,7 +150,6 @@
             </div>
           </div>
 
-          <!-- Form Login -->
           <div id="loginModePanel" class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
             <div>
               <label for="loginUsernameInput" class="block text-xs font-bold text-slate-700 mb-1.5">
@@ -159,7 +172,6 @@
             </div>
           </div>
 
-          <!-- Form Daftar Akun Baru -->
           <div id="registerModePanel" class="hidden grid-cols-1 sm:grid-cols-4 gap-4 items-end">
             <div>
               <label for="regUsernameInput" class="block text-xs font-bold text-slate-700 mb-1.5">
@@ -189,7 +201,6 @@
             </div>
           </div>
 
-          <!-- Form Reset Password via Email -->
           <div id="resetModePanel" class="hidden space-y-3">
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
               <div class="sm:col-span-2">
@@ -416,7 +427,7 @@
 
       <div id="sheetSyncStatus" class="px-6 py-3 bg-blue-50 border-b border-blue-100 text-xs font-medium text-blue-800 flex items-center justify-between gap-3">
         <span id="sheetSyncText">Menyiapkan pengiriman hasil ke Google Sheets...</span>
-        <button onclick="retrySendToSheet()" id="retrySyncBtn" class="hidden underline font-bold shrink-0">Kirim Ulang</button>
+        <button onclick="retrySendToSheet()" id="retrySyncBtn" class="no-print hidden underline font-bold shrink-0">Kirim Ulang</button>
       </div>
 
       <div id="userAnomalyAlert" class="hidden mx-6 mt-4 p-4 rounded-xl border border-amber-300 bg-amber-50 text-amber-900 text-xs sm:text-sm space-y-1">
@@ -455,7 +466,7 @@
         </div>
       </div>
 
-      <div class="px-6 pb-4">
+      <div class="px-6 pb-4 no-print">
         <div class="border border-slate-200 rounded-xl p-4 bg-slate-50 space-y-3">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div>
@@ -468,12 +479,15 @@
         </div>
       </div>
 
-      <div class="px-6 pb-6 flex flex-wrap gap-3">
+      <div class="px-6 pb-6 flex flex-wrap gap-3 no-print">
         <button onclick="resetAndRestartFromSetup()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl">
           Ulangi Simulasi Baru
         </button>
         <button onclick="openDashboard()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl">
           Lihat Dashboard Semua Skor
+        </button>
+        <button onclick="window.print()" class="bg-amber-600 hover:bg-amber-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl">
+          Cetak / Simpan PDF
         </button>
         <button id="toggleReviewBtn" onclick="toggleReviewSection()" class="bg-slate-800 hover:bg-slate-900 text-white text-sm font-bold px-5 py-2.5 rounded-xl">
           Lihat Kunci Jawaban & Pembahasan (110 Soal)
@@ -521,30 +535,52 @@
         </div>
       </div>
 
-      <!-- Riwayat Ujian Sebelumnya Milik User Aktif di Dashboard -->
-      <div class="px-6 pt-5">
-        <div class="border border-blue-200 bg-blue-50/50 rounded-xl p-4 space-y-3">
+      <!-- Grafik Perkembangan Skor User & Riwayat Ujian Sebelumnya -->
+      <div class="px-6 pt-5 grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <div class="lg:col-span-6 border border-slate-200 bg-slate-50/70 rounded-xl p-4 space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <div>
+              <h3 class="text-sm font-extrabold text-slate-800">Grafik Perkembangan Total Skor User</h3>
+              <p class="text-[11px] text-slate-500">Tren skor dari percobaan paling awal hingga terbaru.</p>
+            </div>
+            <span id="trendChartBadge" class="text-[11px] font-bold text-blue-700 bg-blue-100 px-2.5 py-0.5 rounded-full">0 Data</span>
+          </div>
+          <div id="userScoreTrendChart" class="bg-white border border-slate-200 rounded-lg p-3 min-h-[150px] flex items-center justify-center"></div>
+        </div>
+
+        <div class="lg:col-span-6 border border-blue-200 bg-blue-50/50 rounded-xl p-4 space-y-3">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div>
               <h3 id="dashUserHistoryTitle" class="text-sm font-extrabold text-slate-800">Ujian Sebelumnya (User Aktif)</h3>
-              <p class="text-[11px] text-slate-500">Daftar percobaan ujian sebelumnya milik user yang login/tercatat, bisa langsung di-review.</p>
+              <p class="text-[11px] text-slate-500">Klik Review untuk membuka pembahasan sesi sebelumnya.</p>
             </div>
             <span id="dashUserHistoryCount" class="text-xs font-bold text-blue-800 bg-blue-100 px-2.5 py-1 rounded-full">0 Sesi</span>
           </div>
-          <div id="dashUserHistoryList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-52 overflow-y-auto custom-scroll pr-1"></div>
+          <div id="dashUserHistoryList" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto custom-scroll pr-1"></div>
         </div>
       </div>
 
       <div class="p-6 pb-3 flex flex-wrap items-center justify-between gap-3">
-        <input type="text" id="dashboardSearchInput" oninput="renderDashboardTable()"
-          placeholder="Cari nama peserta, formasi, atau instansi..."
-          class="w-full sm:w-80 px-3.5 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:ring-2 focus:ring-blue-600 outline-none" />
-        <select id="dashboardFilterPg" onchange="renderDashboardTable()"
-          class="px-3.5 py-2 rounded-xl border border-slate-300 bg-white text-xs sm:text-sm font-medium focus:ring-2 focus:ring-blue-600 outline-none">
-          <option value="ALL">Semua Status PG</option>
-          <option value="LULUS PG">LULUS PG</option>
-          <option value="TIDAK LULUS PG">TIDAK LULUS PG</option>
-        </select>
+        <div class="flex flex-wrap items-center gap-2">
+          <button type="button" id="scopeAllBtn" onclick="setDashboardScope('ALL')" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-900 text-white">
+            Semua Peserta
+          </button>
+          <button type="button" id="scopeMineBtn" onclick="setDashboardScope('MINE')" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">
+            Skor Saya Saja
+          </button>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2.5">
+          <input type="text" id="dashboardSearchInput" oninput="renderDashboardTable()"
+            placeholder="Cari nama peserta, formasi, atau instansi..."
+            class="w-full sm:w-72 px-3.5 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:ring-2 focus:ring-blue-600 outline-none" />
+          <select id="dashboardFilterPg" onchange="renderDashboardTable()"
+            class="px-3.5 py-2 rounded-xl border border-slate-300 bg-white text-xs sm:text-sm font-medium focus:ring-2 focus:ring-blue-600 outline-none">
+            <option value="ALL">Semua Status PG</option>
+            <option value="LULUS PG">LULUS PG</option>
+            <option value="TIDAK LULUS PG">TIDAK LULUS PG</option>
+          </select>
+        </div>
       </div>
 
       <div class="px-6 pb-6 overflow-x-auto">
@@ -568,8 +604,8 @@
     </div>
   </section>
 
-  <!-- PEMBAHASAN SOAL BERSAMA (BISA DIBUKA DARI HASIL MAUPUN DASHBOARD) -->
-  <section id="reviewSection" class="hidden flex-1 max-w-6xl w-full mx-auto px-4 pb-8">
+  <!-- PEMBAHASAN SOAL BERSAMA (DENGAN RINGKASAN STATISTIK SUBTES) -->
+  <section id="reviewSection" class="hidden flex-1 max-w-6xl w-full mx-auto px-4 pb-8 no-print">
     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
       <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-3">
         <div>
@@ -583,6 +619,9 @@
           <button onclick="renderReview('TKP')" class="px-3 py-1 text-xs font-bold rounded-lg bg-slate-100 text-slate-700">TKP</button>
         </div>
       </div>
+
+      <div id="reviewSubtestStats" class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs"></div>
+
       <div id="reviewList" class="space-y-4 max-h-[650px] overflow-y-auto custom-scroll pr-2"></div>
     </div>
   </section>
@@ -968,7 +1007,9 @@
     let lastExamPayload = null;
     let examStartedAt = 0;
     let isExamActive = false;
+    let isSubmittingScore = false;
     let dashboardRecords = [];
+    let dashboardScope = "ALL";
 
     // =========================================================================
     // MANAJEMEN AKUN UNIK (SINKRON GOOGLE SHEETS + FALLBACK LOKAL)
@@ -1122,6 +1163,7 @@
       applyLoggedUserToUI();
       renderAttemptHistory();
       renderDashboardUserPreviousExams();
+      renderUserScoreTrendChart();
       showAuthFeedback(`Akun "${rawName}" (${emailVal}) berhasil didaftarkan.`);
     }
 
@@ -1151,6 +1193,7 @@
           applyLoggedUserToUI();
           renderAttemptHistory();
           renderDashboardUserPreviousExams();
+          renderUserScoreTrendChart();
           showAuthFeedback(`Selamat datang kembali, ${resolvedName}.`);
           return;
         }
@@ -1179,6 +1222,7 @@
       applyLoggedUserToUI();
       renderAttemptHistory();
       renderDashboardUserPreviousExams();
+      renderUserScoreTrendChart();
       showAuthFeedback(`Selamat datang kembali, ${found.nama} (Mode Lokal).`);
     }
 
@@ -1339,11 +1383,12 @@
       applyLoggedUserToUI();
       renderAttemptHistory();
       renderDashboardUserPreviousExams();
+      renderUserScoreTrendChart();
       showAuthFeedback("Anda telah keluar dari sesi login.");
     }
 
     // =========================================================================
-    // RIWAYAT UJIAN SEBELUM & SESUDAH (UNTUK REVIEW KEMBALI)
+    // RIWAYAT UJIAN SEBELUM & SESUDAH, GRAFIK TREN & STATISTIK REVIEW
     // =========================================================================
     function getActiveUserFilterName() {
       if (loggedUser && loggedUser.nama) return loggedUser.nama.trim();
@@ -1367,13 +1412,16 @@
       localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history.slice(0, 50)));
     }
 
-    function renderAttemptHistory() {
+    function getFilteredUserSessions() {
       const allHistory = getExamHistory();
       const activeName = getActiveUserFilterName();
-      const filtered = activeName
+      return activeName
         ? allHistory.filter(item => normalizeAccountKey(item.nama) === normalizeAccountKey(activeName))
         : allHistory;
+    }
 
+    function renderAttemptHistory() {
+      const filtered = getFilteredUserSessions();
       const listEl = document.getElementById("attemptHistoryList");
       const countBadge = document.getElementById("historyCountBadge");
       if (!listEl || !countBadge) return;
@@ -1419,10 +1467,7 @@
       if (!titleEl || !countEl || !listEl) return;
 
       const activeName = getActiveUserFilterName();
-      const allHistory = getExamHistory();
-      const userSessions = activeName
-        ? allHistory.filter(item => normalizeAccountKey(item.nama) === normalizeAccountKey(activeName))
-        : allHistory;
+      const userSessions = getFilteredUserSessions();
 
       titleEl.textContent = activeName
         ? `Ujian Sebelumnya — ${activeName}`
@@ -1463,6 +1508,55 @@
       });
     }
 
+    function renderUserScoreTrendChart() {
+      const chartBox = document.getElementById("userScoreTrendChart");
+      const badgeEl = document.getElementById("trendChartBadge");
+      if (!chartBox || !badgeEl) return;
+
+      const sessionsChronological = getFilteredUserSessions().slice().reverse();
+      badgeEl.textContent = `${sessionsChronological.length} Sesi`;
+
+      if (sessionsChronological.length < 2) {
+        chartBox.innerHTML = `
+          <div class="text-xs text-slate-500 text-center py-4">
+            ${sessionsChronological.length === 0
+              ? "Belum ada data ujian untuk menampilkan grafik tren."
+              : `Skor 1 sesi tercatat (${sessionsChronological[0].total}). Selesaikan minimal 1 sesi lagi untuk melihat grafik tren perkembangan.`}
+          </div>
+        `;
+        return;
+      }
+
+      const width = 420;
+      const height = 130;
+      const padX = 32;
+      const padY = 18;
+      const maxVal = 550;
+
+      const pts = sessionsChronological.map((s, idx) => {
+        const x = padX + (idx / (sessionsChronological.length - 1)) * (width - padX * 2);
+        const score = Math.max(0, Math.min(maxVal, Number(s.total || 0)));
+        const y = height - padY - (score / maxVal) * (height - padY * 2);
+        return { x, y, score, label: `#${idx + 1}` };
+      });
+
+      const polylineStr = pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+      const circlesHtml = pts.map(p => `
+        <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5" />
+        <text x="${p.x.toFixed(1)}" y="${Math.max(10, p.y - 7).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="bold" fill="#1e293b">${p.score}</text>
+        <text x="${p.x.toFixed(1)}" y="${height - 3}" text-anchor="middle" font-size="9" fill="#64748b">${p.label}</text>
+      `).join("");
+
+      chartBox.innerHTML = `
+        <svg viewBox="0 0 ${width} ${height}" class="w-full h-32">
+          <line x1="${padX}" y1="${height - padY}" x2="${width - padX}" y2="${height - padY}" stroke="#cbd5e1" stroke-width="1" />
+          <line x1="${padX}" y1="${padY}" x2="${width - padX}" y2="${padY}" stroke="#e2e8f0" stroke-dasharray="3" stroke-width="1" />
+          <polyline fill="none" stroke="#2563eb" stroke-width="2.5" points="${polylineStr}" />
+          ${circlesHtml}
+        </svg>
+      `;
+    }
+
     function loadAttemptIntoReview(attemptId) {
       const history = getExamHistory();
       const found = history.find(h => h.id === attemptId);
@@ -1481,8 +1575,22 @@
     }
 
     // =========================================================================
-    // DASHBOARD SEMUA SKOR PESERTA
+    // DASHBOARD SEMUA SKOR PESERTA (FILTER SKOR SAYA SAJA + PERINGKAT)
     // =========================================================================
+    function setDashboardScope(scope) {
+      dashboardScope = scope;
+      const allBtn = document.getElementById("scopeAllBtn");
+      const mineBtn = document.getElementById("scopeMineBtn");
+      if (scope === "MINE") {
+        mineBtn.className = "px-3.5 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white";
+        allBtn.className = "px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200";
+      } else {
+        allBtn.className = "px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-900 text-white";
+        mineBtn.className = "px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200";
+      }
+      renderDashboardTable();
+    }
+
     async function openDashboard() {
       showScreen("dashboard");
     }
@@ -1491,6 +1599,7 @@
       const infoEl = document.getElementById("dashboardSourceInfo");
       infoEl.textContent = "Mengambil data rekap skor peserta...";
       renderDashboardUserPreviousExams();
+      renderUserScoreTrendChart();
 
       const localRecords = getExamHistory().map(h => ({
         waktu: h.waktuLabel || "-",
@@ -1534,8 +1643,14 @@
     function renderDashboardTable() {
       const qText = (document.getElementById("dashboardSearchInput")?.value || "").trim().toLowerCase();
       const pgFilter = document.getElementById("dashboardFilterPg")?.value || "ALL";
+      const activeName = getActiveUserFilterName();
 
       const filtered = dashboardRecords.filter(rec => {
+        if (dashboardScope === "MINE") {
+          if (!activeName || normalizeAccountKey(rec.nama) !== normalizeAccountKey(activeName)) {
+            return false;
+          }
+        }
         const matchPg = pgFilter === "ALL" || rec.status_pg === pgFilter;
         const hay = `${rec.nama} ${rec.formasi} ${rec.instansi}`.toLowerCase();
         const matchText = !qText || hay.includes(qText);
@@ -1554,6 +1669,14 @@
       document.getElementById("dashAverageScore").textContent = avgScore;
       document.getElementById("dashPassCount").textContent = passCount;
 
+      const sortedByScore = filtered
+        .slice()
+        .sort((a, b) => Number(b.total || 0) - Number(a.total || 0));
+      const rankMap = new Map();
+      sortedByScore.forEach((item, idx) => {
+        rankMap.set(item, idx + 1);
+      });
+
       const tbody = document.getElementById("dashboardTableBody");
       tbody.replaceChildren();
 
@@ -1571,10 +1694,14 @@
         const badgeClass = isPass
           ? "bg-emerald-100 text-emerald-800"
           : "bg-rose-100 text-rose-800";
+        const rankNum = rankMap.get(rec) || (i + 1);
+        const rankBadge = rankNum <= 3
+          ? `<span class="ml-1 inline-block text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">Top #${rankNum}</span>`
+          : "";
 
         tr.innerHTML = `
           <td class="py-2.5 px-3 font-semibold text-slate-500">${i + 1}</td>
-          <td class="py-2.5 px-3 font-bold text-slate-800">${escapeHtml(rec.nama)}</td>
+          <td class="py-2.5 px-3 font-bold text-slate-800">${escapeHtml(rec.nama)}${rankBadge}</td>
           <td class="py-2.5 px-3 text-slate-600">
             <div class="font-medium text-slate-800">${escapeHtml(rec.formasi)}</div>
             <div class="text-xs text-slate-500">${escapeHtml(rec.instansi)}</div>
@@ -1722,9 +1849,6 @@
       showScreen("setup");
     }
 
-    // =========================================================================
-    // PROTEKSI REFRESH / TUTUP TAB SAAT UJIAN BERLANGSUNG
-    // =========================================================================
     window.addEventListener("beforeunload", (e) => {
       if (isExamActive) {
         saveExamSessionToStorage();
@@ -2489,6 +2613,7 @@
       reviewMetaLabel = `Sesi Terbaru — ${participantName} (${finishTimeLabel})`;
       renderAttemptHistory();
       renderDashboardUserPreviousExams();
+      renderUserScoreTrendChart();
 
       lastExamPayload = {
         action: "submit_score",
@@ -2518,6 +2643,9 @@
     }
 
     async function sendResultsToGoogleSheet(payload) {
+      if (isSubmittingScore) return;
+      isSubmittingScore = true;
+
       const syncText = document.getElementById("sheetSyncText");
       const retryBtn = document.getElementById("retrySyncBtn");
       retryBtn.classList.add("hidden");
@@ -2526,6 +2654,7 @@
 
       if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("TEMPEL_URL")) {
         syncText.textContent = "Info: URL Google Apps Script belum ditempel pada kode HTML, hasil hanya ditampilkan di layar ini.";
+        isSubmittingScore = false;
         return;
       }
 
@@ -2559,11 +2688,13 @@
       } catch (err) {
         syncText.textContent = "Gagal mengirim rekap nilai ke Google Sheets. Periksa koneksi internet Anda.";
         retryBtn.classList.remove("hidden");
+      } finally {
+        isSubmittingScore = false;
       }
     }
 
     function retrySendToSheet() {
-      if (lastExamPayload) sendResultsToGoogleSheet(lastExamPayload);
+      if (lastExamPayload && !isSubmittingScore) sendResultsToGoogleSheet(lastExamPayload);
     }
 
     function toggleReviewSection() {
@@ -2580,11 +2711,53 @@
       }
     }
 
+    function renderReviewSubtestStats(sourceQuestions, sourceAnswers) {
+      const statsEl = document.getElementById("reviewSubtestStats");
+      if (!statsEl) return;
+
+      let twkTotal = 0, twkCorrect = 0;
+      let tiuTotal = 0, tiuCorrect = 0;
+      let tkpTotal = 0, tkpPoints = 0;
+
+      sourceQuestions.forEach((q, idx) => {
+        const ans = sourceAnswers[idx] ?? null;
+        if (q.subtest === "TWK") {
+          twkTotal++;
+          if (ans !== null && ans === q.answer) twkCorrect++;
+        } else if (q.subtest === "TIU") {
+          tiuTotal++;
+          if (ans !== null && ans === q.answer) tiuCorrect++;
+        } else if (q.subtest === "TKP") {
+          tkpTotal++;
+          if (ans !== null && Array.isArray(q.scores)) {
+            tkpPoints += Number(q.scores[ans] || 0);
+          }
+        }
+      });
+
+      statsEl.innerHTML = `
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
+          <div class="font-bold text-slate-700">TWK</div>
+          <div class="text-sm font-extrabold text-blue-700 mt-0.5">${twkCorrect} / ${twkTotal} Benar (${twkCorrect * 5} Poin)</div>
+        </div>
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
+          <div class="font-bold text-slate-700">TIU</div>
+          <div class="text-sm font-extrabold text-blue-700 mt-0.5">${tiuCorrect} / ${tiuTotal} Benar (${tiuCorrect * 5} Poin)</div>
+        </div>
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
+          <div class="font-bold text-slate-700">TKP (${tkpTotal} Soal)</div>
+          <div class="text-sm font-extrabold text-emerald-700 mt-0.5">Total ${tkpPoints} Poin</div>
+        </div>
+      `;
+    }
+
     function renderReview(filterSubtest) {
       const list = document.getElementById("reviewList");
       const letters = ["A", "B", "C", "D", "E"];
       const sourceQuestions = reviewQuestions.length ? reviewQuestions : questionBank;
       const sourceAnswers = reviewAnswers.length ? reviewAnswers : userAnswers;
+
+      renderReviewSubtestStats(sourceQuestions, sourceAnswers);
       list.replaceChildren();
 
       sourceQuestions.forEach((q, idx) => {
@@ -2674,12 +2847,14 @@
       loadLoggedUserFromStorage();
       renderAttemptHistory();
       renderDashboardUserPreviousExams();
+      renderUserScoreTrendChart();
 
       const nameInput = document.getElementById("participantNameInput");
       if (nameInput) {
         nameInput.addEventListener("input", () => {
           validateNameInputRealtime();
           renderDashboardUserPreviousExams();
+          renderUserScoreTrendChart();
         });
         nameInput.addEventListener("blur", validateNameInputRealtime);
       }
