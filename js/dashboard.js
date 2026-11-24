@@ -113,32 +113,7 @@ function restoreClearedExamHistory() {
 function mapRekapRowToSession(rec, idx) {
   const keyPart = `${normalizeAccountKey(rec.nama)}_${rec.total}_${String(rec.waktu || idx).replace(/\W+/g, "")}`;
   return {
-    id: `db_${keyPart}`,
-    nama: rec.nama || "Peserta",
-    formasi: rec.formasi || "-",
-    instansi: rec.instansi || "-",
-    mode: rec.mode || "Reguler",
-    twk: Number(rec.twk || 0),
-    tiu: Number(rec.tiu || 0),
-    tkp: Number(rec.tkp || 0),
-    total: Number(rec.total || 0),
-    status_pg: rec.status_pg || "-",
-    warning: rec.warning || "Normal",
-    waktuLabel: formatShortDate(rec.waktu),
-    questions: [],
-    answers: [],
-    durations: [],
-    fromDatabase: true
-  };
-}
-
-async function syncHistoryFromDatabaseIfEmpty() {
-  const localHistory = getExamHistory();
-  if (localHistory.length > 0) return localHistory;
-  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("TEMPEL_URL")) return [];
-
-  try {
-    const res = await fetch(`${GOOGLE_SCRIPT_URL}?mode=rekap`);
+    id: `db_${keyPart}`, nama: rec.nama \vert{}\vert{} "Peserta", formasi: rec.formasi \vert{}\vert{} "-", instansi: rec.instansi \vert{}\vert{} "-", mode: rec.mode \vert{}\vert{} "Reguler", twk: Number(rec.twk \vert{}\vert{} 0), tiu: Number(rec.tiu \vert{}\vert{} 0), tkp: Number(rec.tkp \vert{}\vert{} 0), total: Number(rec.total \vert{}\vert{} 0), status_pg: rec.status_pg \vert{}\vert{} "-", warning: rec.warning \vert{}\vert{} "Normal", waktuLabel: formatShortDate(rec.waktu), questions: [], answers: [], durations: [], fromDatabase: true }; }  async function syncHistoryFromDatabaseIfEmpty() { const localHistory = getExamHistory(); if (localHistory.length > 0) return localHistory; if (!GOOGLE_SCRIPT_URL \vert{}\vert{} GOOGLE_SCRIPT_URL.includes("TEMPEL_URL")) return [];  try { const res = await fetch(`${GOOGLE_SCRIPT_URL}?mode=rekap`);
     const json = await res.json();
     if (json && json.status === "sukses" && Array.isArray(json.rekap) && json.rekap.length > 0) {
       const seenIds = new Set();
@@ -167,7 +142,7 @@ function loadAttemptIntoReview(attemptId) {
   if (!Array.isArray(found.questions) || found.questions.length === 0) {
     alert(
       `Sesi ${found.nama} (${found.waktuLabel || "-"}) berasal dari rekap database — Total Skor: ${found.total} ` +
-      `(TWK ${found.twk} | TIU ${found.tiu} | TKP ${found.tkp} • ${found.status_pg}). ` +
+      `(TWK ${found.twk} \vert{} TIU${found.tiu} | TKP ${found.tkp} •${found.status_pg}). ` +
       "Rincian pembahasan per butir soal hanya tersimpan untuk sesi yang dikerjakan di browser ini."
     );
     return;
@@ -205,31 +180,7 @@ function exportLocalHistoryToCsv() {
   const headers = ["Waktu", "Nama", "Formasi", "Instansi", "Mode", "TWK", "TIU", "TKP", "Total", "Status PG", "Warning"];
   const escapeCsv = (val) => {
     const s = String(val ?? "").replace(/"/g, '""');
-    return `"${s}"`;
-  };
-
-  const lines = [
-    headers.map(escapeCsv).join(","),
-    ...history.map(h => [
-      h.waktuLabel || "-",
-      h.nama || "-",
-      h.formasi || "-",
-      h.instansi || "-",
-      h.mode || "-",
-      Number(h.twk || 0),
-      Number(h.tiu || 0),
-      Number(h.tkp || 0),
-      Number(h.total || 0),
-      h.status_pg || "-",
-      h.warning || "Normal"
-    ].map(escapeCsv).join(","))
-  ];
-
-  const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `riwayat_cat_skd_${new Date().toISOString().slice(0, 10)}.csv`;
+    return `"${s}"`; };  const lines = [ headers.map(escapeCsv).join(","), ...history.map(h => [ h.waktuLabel \vert{}\vert{} "-", h.nama \vert{}\vert{} "-", h.formasi \vert{}\vert{} "-", h.instansi \vert{}\vert{} "-", h.mode \vert{}\vert{} "-", Number(h.twk \vert{}\vert{} 0), Number(h.tiu \vert{}\vert{} 0), Number(h.tkp \vert{}\vert{} 0), Number(h.total \vert{}\vert{} 0), h.status_pg \vert{}\vert{} "-", h.warning \vert{}\vert{} "Normal" ].map(escapeCsv).join(",")) ];  const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8;" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `riwayat_cat_skd_${new Date().toISOString().slice(0, 10)}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -250,27 +201,15 @@ function renderAttemptHistory() {
   const countBadge = document.getElementById("historyCountBadge");
   if (!listEl || !countBadge) return;
 
-  countBadge.textContent = `${filtered.length} Sesi`;
-  listEl.replaceChildren();
-
-  if (filtered.length === 0) {
-    const empty = document.createElement("div");
-    empty.className = "col-span-full text-xs text-slate-500 py-2";
-    empty.textContent = "Belum ada riwayat sesi tersimpan untuk review.";
-    listEl.appendChild(empty);
-    return;
-  }
-
-  filtered.forEach((item, idx) => {
-    const urutanLabel = idx === 0 ? "Terbaru (Sesudah)" : `Sebelumnya #${filtered.length - idx}`;
+  countBadge.textContent = `${filtered.length} Sesi`; listEl.replaceChildren();  if (filtered.length === 0) { const empty = document.createElement("div"); empty.className = "col-span-full text-xs text-slate-500 py-2"; empty.textContent = "Belum ada riwayat sesi tersimpan untuk review."; listEl.appendChild(empty); return; }  filtered.forEach((item, idx) => { const urutanLabel = idx === 0 ? "Terbaru (Sesudah)" : `Sebelumnya #${filtered.length - idx}`;
     const card = document.createElement("div");
     card.className = "bg-white border border-slate-200 rounded-xl p-3 flex items-center justify-between gap-3";
 
     const info = document.createElement("div");
     info.innerHTML = `
       <div class="text-xs font-extrabold text-slate-800">${urutanLabel} • Skor ${item.total}</div>
-      <div class="text-[11px] text-slate-500">TWK ${item.twk} | TIU ${item.tiu} | TKP ${item.tkp} • ${item.status_pg}</div>
-      <div class="text-[10px] text-slate-400">${escapeHtml(item.mode || "")} • ${escapeHtml(item.waktuLabel || "")}</div>
+      <div class="text-[11px] text-slate-500">TWK ${item.twk} \vert{} TIU${item.tiu} | TKP ${item.tkp} •${item.status_pg}</div>
+      <div class="text-[10px] text-slate-400">${escapeHtml(item.mode \vert{}\vert{} "")} • ${escapeHtml(item.waktuLabel || "")}</div>
     `;
 
     const btn = document.createElement("button");
@@ -294,9 +233,7 @@ function renderDashboardUserPreviousExams() {
   const userSessions = getFilteredUserSessions();
 
   titleEl.textContent = activeName
-    ? `Ujian Sebelumnya — ${activeName}`
-    : "Ujian Sebelumnya (Semua Sesi Tersimpan)";
-  countEl.textContent = `${userSessions.length} Sesi`;
+    ? `Ujian Sebelumnya — ${activeName}` : "Ujian Sebelumnya (Semua Sesi Tersimpan)"; countEl.textContent = `${userSessions.length} Sesi`;
   listEl.replaceChildren();
 
   if (userSessions.length === 0) {
@@ -317,7 +254,7 @@ function renderDashboardUserPreviousExams() {
     const info = document.createElement("div");
     info.innerHTML = `
       <div class="text-xs font-extrabold text-slate-800">${escapeHtml(label)} • Skor ${item.total}</div>
-      <div class="text-[11px] text-slate-500">TWK ${item.twk} | TIU ${item.tiu} | TKP ${item.tkp} • ${escapeHtml(item.status_pg)}</div>
+      <div class="text-[11px] text-slate-500">TWK ${item.twk} \vert{} TIU${item.tiu} | TKP ${item.tkp} •${escapeHtml(item.status_pg)}</div>
       <div class="text-[10px] text-slate-400">${escapeHtml(item.waktuLabel || "")}</div>
     `;
 
@@ -445,11 +382,10 @@ function renderSingleTrendGroup(containerEl, sessionsChronological, seriesMode, 
         </div>
       </div>
 
-      <svg viewBox="0 0 ${width} ${height}" class="w-full h-32">
+      <svg viewBox="0 0 ${width}${height}" class="w-full h-32">
         <line x1="${padX}" y1="${padTop + plotHeight}" x2="${width - padX}" y2="${padTop + plotHeight}" stroke="#cbd5e1" stroke-width="1" />
         ${pgLineHtml}
-        ${seriesSvgHtml}
-        ${xLabelsHtml}
+        ${seriesSvgHtml}${xLabelsHtml}
       </svg>
 
       <div class="flex flex-wrap items-center justify-center gap-2.5 text-[10px] font-semibold text-slate-600">
@@ -474,8 +410,7 @@ function renderUserScoreTrendChart() {
   const fullSessions = userSessions.filter(s => !isFocusOrDrillMode(s.mode));
   const focusSessions = userSessions.filter(s => isFocusOrDrillMode(s.mode));
 
-  if (fullBadge) fullBadge.textContent = `${fullSessions.length} Sesi`;
-  if (focusBadge) focusBadge.textContent = `${focusSessions.length} Sesi`;
+  if (fullBadge) fullBadge.textContent = `${fullSessions.length} Sesi`; if (focusBadge) focusBadge.textContent = `${focusSessions.length} Sesi`;
 
   if (pgSummaryEl) {
     if (userSessions.length === 0) {
@@ -485,309 +420,4 @@ function renderUserScoreTrendChart() {
       const avgTiu = Math.round(userSessions.reduce((a, b) => a + Number(b.tiu || 0), 0) / userSessions.length);
       const avgTkp = Math.round(userSessions.reduce((a, b) => a + Number(b.tkp || 0), 0) / userSessions.length);
       pgSummaryEl.textContent =
-        `Rata-rata — TWK: ${avgTwk}/65 • TIU: ${avgTiu}/80 • TKP: ${avgTkp}/166`;
-    }
-  }
-
-  renderSingleTrendGroup(
-    fullBox,
-    fullSessions,
-    fullTrendSeriesMode,
-    "setFullTrendSeriesMode",
-    true,
-    "Belum ada sesi paket lengkap untuk grafik tren."
-  );
-
-  renderSingleTrendGroup(
-    focusBox,
-    focusSessions,
-    focusTrendSeriesMode,
-    "setFocusTrendSeriesMode",
-    false,
-    "Belum ada sesi fokus subtes / ulangi soal untuk grafik tren."
-  );
-}
-
-function populateDashboardInstitutionFilter() {
-  const selectEl = document.getElementById("dashboardFilterInstansi");
-  if (!selectEl) return;
-
-  const previousValue = selectEl.value || "ALL";
-  const institutions = Array.from(
-    new Set(
-      dashboardRecords
-        .map(r => String(r.instansi || "").trim())
-        .filter(Boolean)
-    )
-  ).sort((a, b) => a.localeCompare(b, "id"));
-
-  selectEl.replaceChildren();
-  const allOpt = document.createElement("option");
-  allOpt.value = "ALL";
-  allOpt.textContent = "Semua Instansi";
-  selectEl.appendChild(allOpt);
-
-  institutions.forEach(inst => {
-    const opt = document.createElement("option");
-    opt.value = inst;
-    opt.textContent = inst;
-    selectEl.appendChild(opt);
-  });
-
-  if (institutions.includes(previousValue)) {
-    selectEl.value = previousValue;
-  } else {
-    selectEl.value = "ALL";
-  }
-}
-
-function setDashboardScope(scope) {
-  dashboardScope = scope;
-  const allBtn = document.getElementById("scopeAllBtn");
-  const mineBtn = document.getElementById("scopeMineBtn");
-  if (scope === "MINE") {
-    mineBtn.className = "px-3.5 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white";
-    allBtn.className = "px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200";
-  } else {
-    allBtn.className = "px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-900 text-white";
-    mineBtn.className = "px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200";
-  }
-  renderDashboardTable();
-}
-
-function setDashboardTop10Mode() {
-  dashboardTop10Only = !dashboardTop10Only;
-  const btn = document.getElementById("scopeTop10Btn");
-  if (btn) {
-    btn.className = dashboardTop10Only
-      ? "px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-600 text-white"
-      : "px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-100 text-amber-900 hover:bg-amber-200";
-  }
-  renderDashboardTable();
-}
-
-async function openDashboard() {
-  showScreen("dashboard");
-}
-
-async function refreshDashboardData() {
-  const infoEl = document.getElementById("dashboardSourceInfo");
-  if (infoEl) infoEl.textContent = "Mengambil data rekap skor peserta...";
-  updateRestoreHistoryButtons();
-
-  const localRecords = getExamHistory().map(h => ({
-    waktu: h.waktuLabel || "-",
-    nama: h.nama || "Peserta",
-    formasi: h.formasi || "-",
-    instansi: h.instansi || "-",
-    mode: h.mode || "-",
-    twk: Number(h.twk || 0),
-    tiu: Number(h.tiu || 0),
-    tkp: Number(h.tkp || 0),
-    total: Number(h.total || 0),
-    status_pg: h.status_pg || "-",
-    warning: h.warning || "Normal"
-  }));
-
-  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("TEMPEL_URL")) {
-    dashboardRecords = localRecords;
-    if (infoEl) infoEl.textContent = `Status Koneksi: Lokal Saja • ${dashboardRecords.length} data di browser ini.`;
-    renderDashboardUserPreviousExams();
-    renderUserScoreTrendChart();
-    populateDashboardInstitutionFilter();
-    renderDashboardTable();
-    return;
-  }
-
-  try {
-    const res = await fetch(`${GOOGLE_SCRIPT_URL}?mode=rekap`);
-    const json = await res.json();
-    if (json && json.status === "sukses" && Array.isArray(json.rekap) && json.rekap.length > 0) {
-      const reversedRekap = json.rekap.slice().reverse();
-      dashboardRecords = reversedRekap;
-
-      if (getExamHistory().length === 0 && !getBackupExamHistory().length) {
-        const seenIds = new Set();
-        const mapped = [];
-        reversedRekap.forEach((r, i) => {
-          const item = mapRekapRowToSession(r, i);
-          if (!seenIds.has(item.id)) {
-            seenIds.add(item.id);
-            mapped.push(item);
-          }
-        });
-        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(mapped.slice(0, 150)));
-      }
-
-      if (infoEl) infoEl.textContent = `Status Koneksi: Terhubung ke Google Sheets • ${dashboardRecords.length} data tercatat.`;
-    } else {
-      dashboardRecords = localRecords;
-      if (infoEl) infoEl.textContent = `Status Koneksi: Lokal (${dashboardRecords.length} data tersimpan di browser).`;
-    }
-  } catch (err) {
-    dashboardRecords = localRecords;
-    if (infoEl) infoEl.textContent = `Status Koneksi: Cadangan Lokal / Offline (${dashboardRecords.length} data di browser).`;
-  }
-
-  renderDashboardUserPreviousExams();
-  renderUserScoreTrendChart();
-  populateDashboardInstitutionFilter();
-  renderDashboardTable();
-}
-
-function renderDashboardTable() {
-  const qText = (document.getElementById("dashboardSearchInput")?.value || "").trim().toLowerCase();
-  const pgFilter = document.getElementById("dashboardFilterPg")?.value || "ALL";
-  const instFilter = document.getElementById("dashboardFilterInstansi")?.value || "ALL";
-  const modeFilter = document.getElementById("dashboardFilterMode")?.value || "ALL";
-  const activeName = getActiveUserFilterName();
-  const activeKey = activeName ? normalizeAccountKey(activeName) : "";
-
-  const filtered = dashboardRecords.filter(rec => {
-    if (dashboardScope === "MINE") {
-      if (!activeKey || normalizeAccountKey(rec.nama) !== activeKey) {
-        return false;
-      }
-    }
-    const matchPg = pgFilter === "ALL" || rec.status_pg === pgFilter;
-    const matchInst = instFilter === "ALL" || String(rec.instansi || "").trim() === instFilter;
-    const isFocus = isFocusOrDrillMode(rec.mode);
-    const matchMode =
-      modeFilter === "ALL" ||
-      (modeFilter === "FULL" && !isFocus) ||
-      (modeFilter === "FOCUS" && isFocus);
-    const hay = `${rec.nama} ${rec.formasi} ${rec.instansi} ${rec.mode || ""}`.toLowerCase();
-    const matchText = !qText || hay.includes(qText);
-    return matchPg && matchInst && matchMode && matchText;
-  });
-
-  const sortedRows = filtered
-    .slice()
-    .sort((a, b) => Number(b.total || 0) - Number(a.total || 0));
-
-  const rowsToDisplay = dashboardTop10Only
-    ? sortedRows.slice(0, 10)
-    : sortedRows;
-
-  const totalAttempts = rowsToDisplay.length;
-  const highestScore = totalAttempts > 0 ? Math.max(...rowsToDisplay.map(r => Number(r.total || 0))) : 0;
-  const avgScore = totalAttempts > 0
-    ? Math.round(rowsToDisplay.reduce((acc, r) => acc + Number(r.total || 0), 0) / totalAttempts)
-    : 0;
-  const passCount = rowsToDisplay.filter(r => r.status_pg === "LULUS PG").length;
-
-  document.getElementById("dashTotalAttempts").textContent = totalAttempts;
-  document.getElementById("dashHighestScore").textContent = highestScore;
-  document.getElementById("dashAverageScore").textContent = avgScore;
-  document.getElementById("dashPassCount").textContent = passCount;
-
-  const tbody = document.getElementById("dashboardTableBody");
-  tbody.replaceChildren();
-
-  if (rowsToDisplay.length === 0) {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td colspan="10" class="py-6 px-4 text-center text-slate-500">Belum ada data skor peserta yang sesuai filter.</td>`;
-    tbody.appendChild(tr);
-    return;
-  }
-
-  rowsToDisplay.forEach((rec, i) => {
-    const tr = document.createElement("tr");
-    const isCurrentUserRow = activeKey && normalizeAccountKey(rec.nama) === activeKey;
-    tr.className = isCurrentUserRow ? "bg-blue-50/60 hover:bg-blue-50" : "hover:bg-slate-50";
-
-    const isPass = rec.status_pg === "LULUS PG";
-    const badgeClass = isPass
-      ? "bg-emerald-100 text-emerald-800"
-      : "bg-rose-100 text-rose-800";
-    const rankNum = i + 1;
-    const rankBadge = rankNum <= 3
-      ? `<span class="ml-1 inline-block text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">Top #${rankNum}</span>`
-      : "";
-    const youBadge = isCurrentUserRow
-      ? `<span class="ml-1 inline-block text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">Anda</span>`
-      : "";
-    const focusTag = isFocusOrDrillMode(rec.mode)
-      ? `<span class="ml-1 inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">Fokus</span>`
-      : "";
-
-    tr.innerHTML = `
-      <td class="py-2.5 px-3 font-semibold text-slate-500">${rankNum}</td>
-      <td class="py-2.5 px-3 font-bold text-slate-800">${escapeHtml(rec.nama)}${rankBadge}${youBadge}</td>
-      <td class="py-2.5 px-3 font-medium text-slate-800">${escapeHtml(rec.formasi)}${focusTag}</td>
-      <td class="py-2.5 px-3 text-slate-600">${escapeHtml(rec.instansi)}</td>
-      <td class="py-2.5 px-3 text-center font-semibold">${rec.twk}</td>
-      <td class="py-2.5 px-3 text-center font-semibold">${rec.tiu}</td>
-      <td class="py-2.5 px-3 text-center font-semibold">${rec.tkp}</td>
-      <td class="py-2.5 px-3 text-center font-extrabold text-blue-700">${rec.total}</td>
-      <td class="py-2.5 px-3 text-center">
-        <span class="text-xs font-bold px-2 py-0.5 rounded ${badgeClass}">${escapeHtml(rec.status_pg)}</span>
-      </td>
-      <td class="py-2.5 px-3 text-xs text-slate-500 whitespace-nowrap">${escapeHtml(formatShortDate(rec.waktu))}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-function openDonationModal() {
-  if (typeof isExamActive !== "undefined" && isExamActive) {
-    alert("Selesaikan atau keluar dari sesi ujian aktif terlebih dahulu sebelum membuka menu donasi.");
-    return;
-  }
-  const modal = document.getElementById("donationModal");
-  if (modal) {
-    modal.classList.remove("hidden");
-    modal.classList.add("flex");
-  }
-}
-
-function closeDonationModal() {
-  const modal = document.getElementById("donationModal");
-  if (modal) {
-    modal.classList.add("hidden");
-    modal.classList.remove("flex");
-  }
-}
-
-function selectDonationPreset(amountLabel) {
-  const inputEl = document.getElementById("donationAmountInput");
-  if (inputEl) {
-    inputEl.value = amountLabel;
-  }
-  document.querySelectorAll(".donation-preset-btn").forEach(btn => {
-    const isMatch = btn.dataset.amount === amountLabel;
-    btn.className = isMatch
-      ? "donation-preset-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-600 text-white"
-      : "donation-preset-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100";
-  });
-}
-
-async function copyDonationText(textToCopy, feedbackId) {
-  const fb = document.getElementById(feedbackId);
-  try {
-    await navigator.clipboard.writeText(textToCopy);
-  } catch (err) {
-    const tempInput = document.createElement("input");
-    tempInput.value = textToCopy;
-    document.body.appendChild(tempInput);
-    tempInput.select();
-    document.execCommand("copy");
-    document.body.removeChild(tempInput);
-  }
-  if (fb) {
-    fb.textContent = `Tersalin: ${textToCopy}`;
-    fb.classList.remove("hidden");
-    setTimeout(() => fb.classList.add("hidden"), 2500);
-  }
-}
-
-function confirmDonationNote() {
-  const amountVal = (document.getElementById("donationAmountInput")?.value || "Seikhlasnya").trim();
-  const senderVal = (document.getElementById("donationSenderInput")?.value || "Peserta").trim();
-  const noteEl = document.getElementById("donationThankYouNote");
-  if (noteEl) {
-    noteEl.textContent =
-      `Terima kasih ${senderVal || "Peserta"} atas dukungan donasi (${amountVal || "Seikhlasnya"}) untuk pengembangan Simulasi CAT SKD CPNS oleh Best D Pamungkas.`;
-    noteEl.classList.remove("hidden");
-  }
-}
-
+        `Rata-rata — TWK: ${avgTwk}/65 • TIU: ${avgTiu}/80 • T
