@@ -61,18 +61,18 @@
         </div>
       </div>
 
-      <div id="navHeaderControls" class="flex items-center gap-2">
-        <button onclick="showScreen('setup')" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-100 text-xs font-semibold px-3 py-2 rounded-lg transition">
+      <div id="navHeaderControls" class="flex flex-wrap items-center gap-2">
+        <button type="button" onclick="showScreen('setup')" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-100 text-xs font-semibold px-3 py-2 rounded-lg transition">
           Beranda Ujian
         </button>
-        <button onclick="openDashboard()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition">
+        <button type="button" onclick="openDashboard()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition">
           Dashboard Skor
         </button>
-        <button id="logoutBtn" onclick="logoutParticipant()" class="hidden bg-slate-800 hover:bg-rose-600 text-slate-200 text-xs font-semibold px-3 py-2 rounded-lg transition">
+        <button type="button" onclick="openDonationModal()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-extrabold px-3 py-2 rounded-lg transition">
+          Donasi Seikhlasnya
+        </button>
+        <button type="button" id="logoutBtn" onclick="logoutParticipant()" class="hidden bg-slate-800 hover:bg-rose-600 text-slate-200 text-xs font-semibold px-3 py-2 rounded-lg transition">
           Keluar
-          <button type="button" onclick="openDonationModal()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-extrabold px-3 py-2 rounded-lg transition">
-  Donasi Seikhlasnya
-</button>
         </button>
       </div>
 
@@ -85,7 +85,7 @@
           <div class="text-[10px] uppercase tracking-wider text-slate-400">Sisa Waktu</div>
           <div id="timerDisplay" class="font-mono font-bold text-lg text-emerald-400">100:00</div>
         </div>
-        <button onclick="confirmFinishExam()" class="bg-rose-600 hover:bg-rose-700 text-white text-xs sm:text-sm font-semibold px-3.5 py-2 rounded-lg transition shadow">
+        <button type="button" onclick="confirmFinishExam()" class="bg-rose-600 hover:bg-rose-700 text-white text-xs sm:text-sm font-semibold px-3.5 py-2 rounded-lg transition shadow">
           Selesai Ujian
         </button>
       </div>
@@ -295,7 +295,7 @@
           </div>
 
           <div class="pt-2">
-            <button id="startExamBtn" onclick="startExam()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-md hover:shadow-lg transition text-base">
+            <button type="button" id="startExamBtn" onclick="startExam()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-md hover:shadow-lg transition text-base">
               Mulai Ujian Simulasi CAT Sekarang
             </button>
           </div>
@@ -363,14 +363,14 @@
 
         <div class="pt-6 mt-8 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
           <div class="flex items-center gap-2">
-            <button onclick="prevQuestion()" id="prevBtn" class="px-4 py-2 rounded-xl border border-slate-300 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-40">
+            <button type="button" onclick="prevQuestion()" id="prevBtn" class="px-4 py-2 rounded-xl border border-slate-300 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-40">
               ← Sebelumnya
             </button>
-            <button onclick="toggleDoubt()" id="doubtBtn" class="px-4 py-2 rounded-xl bg-amber-100 border border-amber-300 text-amber-900 text-sm font-semibold hover:bg-amber-200">
+            <button type="button" onclick="toggleDoubt()" id="doubtBtn" class="px-4 py-2 rounded-xl bg-amber-100 border border-amber-300 text-amber-900 text-sm font-semibold hover:bg-amber-200">
               Ragu-Ragu
             </button>
           </div>
-          <button onclick="saveAndNext()" id="nextBtn" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shadow">
+          <button type="button" onclick="saveAndNext()" id="nextBtn" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shadow">
             Simpan & Lanjutkan →
           </button>
         </div>
@@ -383,10 +383,10 @@
         </div>
 
         <div class="flex gap-1.5 mb-3">
-          <button onclick="filterNav('ALL')" class="nav-filter-btn flex-1 py-1.5 text-xs font-bold rounded-lg bg-slate-800 text-white" data-filter="ALL">Semua</button>
-          <button onclick="filterNav('TWK')" class="nav-filter-btn flex-1 py-1.5 text-xs font-bold rounded-lg bg-slate-100 text-slate-700" data-filter="TWK">TWK</button>
-          <button onclick="filterNav('TIU')" class="nav-filter-btn flex-1 py-1.5 text-xs font-bold rounded-lg bg-slate-100 text-slate-700" data-filter="TIU">TIU</button>
-          <button onclick="filterNav('TKP')" class="nav-filter-btn flex-1 py-1.5 text-xs font-bold rounded-lg bg-slate-100 text-slate-700" data-filter="TKP">TKP</button>
+          <button type="button" onclick="filterNav('ALL')" class="nav-filter-btn flex-1 py-1.5 text-xs font-bold rounded-lg bg-slate-800 text-white" data-filter="ALL">Semua</button>
+          <button type="button" onclick="filterNav('TWK')" class="nav-filter-btn flex-1 py-1.5 text-xs font-bold rounded-lg bg-slate-100 text-slate-700" data-filter="TWK">TWK</button>
+          <button type="button" onclick="filterNav('TIU')" class="nav-filter-btn flex-1 py-1.5 text-xs font-bold rounded-lg bg-slate-100 text-slate-700" data-filter="TIU">TIU</button>
+          <button type="button" onclick="filterNav('TKP')" class="nav-filter-btn flex-1 py-1.5 text-xs font-bold rounded-lg bg-slate-100 text-slate-700" data-filter="TKP">TKP</button>
         </div>
 
         <div id="questionGrid" class="grid grid-cols-6 sm:grid-cols-8 lg:grid-cols-6 gap-1.5 max-h-[360px] overflow-y-auto custom-scroll p-1"></div>
@@ -424,7 +424,7 @@
 
       <div id="sheetSyncStatus" class="px-6 py-3 bg-blue-50 border-b border-blue-100 text-xs font-medium text-blue-800 flex items-center justify-between gap-3">
         <span id="sheetSyncText">Menyiapkan pengiriman hasil ke Google Sheets...</span>
-        <button onclick="retrySendToSheet()" id="retrySyncBtn" class="no-print hidden underline font-bold shrink-0">Kirim Ulang</button>
+        <button type="button" onclick="retrySendToSheet()" id="retrySyncBtn" class="no-print hidden underline font-bold shrink-0">Kirim Ulang</button>
       </div>
 
       <div id="userAnomalyAlert" class="hidden mx-6 mt-4 p-4 rounded-xl border border-amber-300 bg-amber-50 text-amber-900 text-xs sm:text-sm space-y-1">
@@ -488,19 +488,19 @@
       </div>
 
       <div class="px-6 pb-6 flex flex-wrap gap-3 no-print">
-        <button onclick="resetAndRestartFromSetup()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl">
+        <button type="button" onclick="resetAndRestartFromSetup()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl">
           Ulangi Simulasi Baru
         </button>
-        <button onclick="retryWrongAndDoubtQuestions()" class="bg-rose-600 hover:bg-rose-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl">
+        <button type="button" onclick="retryWrongAndDoubtQuestions()" class="bg-rose-600 hover:bg-rose-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl">
           Ulangi Soal Salah & Ragu
         </button>
-        <button onclick="openDashboard()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl">
+        <button type="button" onclick="openDashboard()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl">
           Lihat Dashboard Semua Skor
         </button>
-        <button onclick="window.print()" class="bg-amber-600 hover:bg-amber-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl">
+        <button type="button" onclick="window.print()" class="bg-amber-600 hover:bg-amber-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl">
           Cetak / Simpan PDF
         </button>
-        <button id="toggleReviewBtn" onclick="toggleReviewSection()" class="bg-slate-800 hover:bg-slate-900 text-white text-sm font-bold px-5 py-2.5 rounded-xl">
+        <button type="button" id="toggleReviewBtn" onclick="toggleReviewSection()" class="bg-slate-800 hover:bg-slate-900 text-white text-sm font-bold px-5 py-2.5 rounded-xl">
           Lihat Kunci Jawaban & Pembahasan (110 Soal)
         </button>
       </div>
@@ -522,7 +522,7 @@
           <h2 class="text-2xl font-extrabold">Dashboard Semua Skor Peserta</h2>
           <p id="dashboardSourceInfo" class="text-xs text-blue-100 mt-1">Memuat data skor peserta...</p>
         </div>
-        <button onclick="refreshDashboardData()" class="bg-white/15 hover:bg-white/25 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition">
+        <button type="button" onclick="refreshDashboardData()" class="bg-white/15 hover:bg-white/25 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition">
           Muat Ulang Data Skor
         </button>
       </div>
@@ -659,10 +659,10 @@
           <p id="reviewSessionSubtitle" class="text-xs text-slate-500"></p>
         </div>
         <div class="flex flex-wrap items-center gap-1.5">
-          <button onclick="renderReview('ALL')" data-subtest="ALL" class="review-subtest-btn active-subtest px-3 py-1 text-xs font-bold rounded-lg bg-slate-800 text-white">Semua</button>
-          <button onclick="renderReview('TWK')" data-subtest="TWK" class="review-subtest-btn px-3 py-1 text-xs font-bold rounded-lg bg-slate-100 text-slate-700">TWK</button>
-          <button onclick="renderReview('TIU')" data-subtest="TIU" class="review-subtest-btn px-3 py-1 text-xs font-bold rounded-lg bg-slate-100 text-slate-700">TIU</button>
-          <button onclick="renderReview('TKP')" data-subtest="TKP" class="review-subtest-btn px-3 py-1 text-xs font-bold rounded-lg bg-slate-100 text-slate-700">TKP</button>
+          <button type="button" onclick="renderReview('ALL')" data-subtest="ALL" class="review-subtest-btn active-subtest px-3 py-1 text-xs font-bold rounded-lg bg-slate-800 text-white">Semua</button>
+          <button type="button" onclick="renderReview('TWK')" data-subtest="TWK" class="review-subtest-btn px-3 py-1 text-xs font-bold rounded-lg bg-slate-100 text-slate-700">TWK</button>
+          <button type="button" onclick="renderReview('TIU')" data-subtest="TIU" class="review-subtest-btn px-3 py-1 text-xs font-bold rounded-lg bg-slate-100 text-slate-700">TIU</button>
+          <button type="button" onclick="renderReview('TKP')" data-subtest="TKP" class="review-subtest-btn px-3 py-1 text-xs font-bold rounded-lg bg-slate-100 text-slate-700">TKP</button>
           <select id="reviewCategoryFilter" onchange="renderReview(document.querySelector('.review-subtest-btn.active-subtest')?.dataset.subtest || 'ALL')"
             class="px-2.5 py-1 text-xs font-bold rounded-lg border border-slate-300 bg-white text-slate-700">
             <option value="ALL">Semua Kategori</option>
@@ -684,7 +684,8 @@
   <footer class="text-center text-xs text-slate-500 pb-4">
     Simulasi CAT SKD CPNS BKN • Dibuat oleh <strong class="text-slate-700">Best D Pamungkas</strong>
   </footer>
-<!-- MODAL DONASI SEIKHLASNYA -->
+
+  <!-- MODAL DONASI SEIKHLASNYA -->
   <div id="donationModal" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs items-center justify-center p-4 no-print">
     <div class="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-lg w-full overflow-hidden">
       <div class="bg-gradient-to-r from-amber-600 via-amber-500 to-orange-500 p-5 text-white flex items-center justify-between gap-3">
@@ -759,10 +760,11 @@
       </div>
     </div>
   </div>
-  <script src="js/config.js?v=6"></script>
-  <script src="js/questions.js?v=6"></script>
-  <script src="js/auth.js?v=6"></script>
-  <script src="js/dashboard.js?v=6"></script>
-  <script src="js/exam.js?v=6"></script>
+
+  <script src="js/config.js?v=7"></script>
+  <script src="js/questions.js?v=7"></script>
+  <script src="js/auth.js?v=7"></script>
+  <script src="js/dashboard.js?v=7"></script>
+  <script src="js/exam.js?v=7"></script>
 </body>
 </html>
