@@ -2419,21 +2419,27 @@
         : "Mengirim rekap nilai ke Google Sheets...";
 
       try {
-        await fetch(GOOGLE_SCRIPT_URL, {
+        const res = await fetch(GOOGLE_SCRIPT_URL, {
           method: "POST",
-          mode: "no-cors",
           headers: {
             "Content-Type": "text/plain;charset=utf-8"
           },
           body: JSON.stringify(payload)
         });
 
-        if (hasWarning) {
-          syncText.textContent =
-            `⚠️ Rekap nilai terkirim ke Google Sheets dengan catatan ${payload.warning}.`;
+        const result = await res.json();
+        if (result && result.status === "sukses") {
+          const finalWarning = result.warning || payload.warning;
+          if (finalWarning && finalWarning !== "Normal") {
+            syncText.textContent =
+              `⚠️ Rekap nilai terkirim ke Google Sheets dengan catatan ${finalWarning}.`;
+          } else {
+            syncText.textContent =
+              "Rekap nilai, formasi, instansi, serta info perangkat & IP berhasil dikirim ke database Google Sheets!";
+          }
         } else {
-          syncText.textContent =
-            "Rekap nilai, formasi, instansi, serta info perangkat & IP berhasil dikirim ke database Google Sheets!";
+          syncText.textContent = `Gagal menyimpan ke Google Sheets: ${(result && result.pesan) || "Respons tidak valid"}.`;
+          retryBtn.classList.remove("hidden");
         }
       } catch (err) {
         syncText.textContent = "Gagal mengirim rekap nilai ke Google Sheets. Periksa koneksi internet Anda.";
