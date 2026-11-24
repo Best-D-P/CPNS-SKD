@@ -193,6 +193,7 @@ function startExam() {
 
   const durationMinutes = parseInt(document.getElementById("durationSelect").value, 10);
   const orderMode = document.getElementById("orderSelect").value;
+  const focusMode = document.getElementById("subtestFocusSelect")?.value || "ALL";
   examModeLabel = durationMinutes === 130 ? "Disabilitas (130 Menit)" : "Reguler (100 Menit)";
   remainingSeconds = durationMinutes * 60;
   examEndTime = Date.now() + remainingSeconds * 1000;
@@ -238,14 +239,34 @@ function startExam() {
     return orderMode === "shuffled" ? shuffleArray(selected) : selected;
   }
 
-  const twk = buildSubtestQuota("TWK", 30);
-  const tiu = buildSubtestQuota("TIU", 35);
-  const tkp = buildSubtestQuota("TKP", 45);
+  if (focusMode === "TWK") {
+    questionBank = buildSubtestQuota("TWK", 30).map((item, idx) => ({
+      ...item,
+      id: idx + 1
+    }));
+    examModeLabel = `${examModeLabel} • Fokus TWK (30 Soal)`;
+  } else if (focusMode === "TIU") {
+    questionBank = buildSubtestQuota("TIU", 35).map((item, idx) => ({
+      ...item,
+      id: idx + 1
+    }));
+    examModeLabel = `${examModeLabel} • Fokus TIU (35 Soal)`;
+  } else if (focusMode === "TKP") {
+    questionBank = buildSubtestQuota("TKP", 45).map((item, idx) => ({
+      ...item,
+      id: idx + 1
+    }));
+    examModeLabel = `${examModeLabel} • Fokus TKP (45 Soal)`;
+  } else {
+    const twk = buildSubtestQuota("TWK", 30);
+    const tiu = buildSubtestQuota("TIU", 35);
+    const tkp = buildSubtestQuota("TKP", 45);
 
-  questionBank = [...twk, ...tiu, ...tkp].map((item, idx) => ({
-    ...item,
-    id: idx + 1
-  }));
+    questionBank = [...twk, ...tiu, ...tkp].map((item, idx) => ({
+      ...item,
+      id: idx + 1
+    }));
+  }
 
   userAnswers = new Array(questionBank.length).fill(null);
   doubtFlags = new Array(questionBank.length).fill(false);
