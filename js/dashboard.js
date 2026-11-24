@@ -27,6 +27,23 @@ function getExamHistory() {
   }
 }
 
+function getBackupExamHistory() {
+  try {
+    const raw = localStorage.getItem(BACKUP_HISTORY_STORAGE_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? list : [];
+  } catch (err) {
+    return [];
+  }
+}
+
+function updateRestoreHistoryButtons() {
+  const hasBackup = getBackupExamHistory().length > 0;
+  document.querySelectorAll(".restore-history-btn").forEach(btn => {
+    btn.classList.toggle("hidden", !hasBackup);
+  });
+}
+
 function saveAttemptToHistory(attemptRecord) {
   const history = getExamHistory();
   history.unshift(attemptRecord);
@@ -34,12 +51,116 @@ function saveAttemptToHistory(attemptRecord) {
 }
 
 function clearLocalExamHistory() {
-  if (!confirm("Hapus seluruh riwayat ujian lokal yang tersimpan di browser ini?")) return;
+  const current = getExamHistory();
+  if (!current.length) {
+    alert("Riwayat lokal memang sudah kosong.");
+    updateRestoreHistoryButtons();
+    return;
+  }
+  if (!confirm("Hapus riwayat ujian lokal di browser ini? Cadangan sementara akan disimpan agar bisa dipulihkan jika terlanjur terhapus.")) return;
+
+  localStorage.setItem(BACKUP_HISTORY_STORAGE_KEY, JSON.stringify(current.slice(0, 150)));
   localStorage.removeItem(HISTORY_STORAGE_KEY);
+
+  updateRestoreHistoryButtons();
   renderAttemptHistory();
   renderDashboardUserPreviousExams();
   renderUserScoreTrendChart();
   refreshDashboardData();
+}
+
+function restoreClearedExamHistory() {
+  const backup = getBackupExamHistory();
+  if (!backup.length) {
+    alert("Tidak ada cadangan riwayat lokal yang bisa dipulihkan.");
+    return;
+  }
+
+  const existing = getExamHistory();
+  const merged = [...existing];
+  const seenIds = new Set(existing.map(x => x.id));
+
+  backup.forEach(item => {
+    if (item && item.id && !seenIds.has(item.id)) {
+      seenIds.add(item.id);
+      merged.push(item);
+    }
+  });
+
+  localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(merged.slice(0, 150)));
+  localStorage.removeItem(BACKUP_HISTORY_STORAGE_KEY);
+
+  updateRestoreHistoryButtons();
+  renderAttemptHistory();
+  renderDashboardUserPreviousExams();
+  renderUserScoreTrendChart();
+  refreshDashboardData();
+  alert(`Berhasil mengembalikan ${backup.length} sesi riwayat ujian lokal.`);
+}
+
+function mapRekapRowToSession(rec, idx) {
+  return {
+    id: `db_${idx}_${String(rec.waktu || "").replace(/\W+/g, "")}`,
+    nama: rec.nama || "Peserta",
+    formasi: rec.formasi || "-",
+    instansi: rec.instansi || "-",
+    mode: rec.mode || "Reguler",
+    twk: Number(rec.twk || 0),
+    tiu: Number(rec.tiu || 0),
+    tkp: Number(rec.tkp || 0),
+    total: Number(rec.total || 0),
+    status_pg: rec.status_pg || "-",
+    warning: rec.warning || "Normal",
+    waktuLabel: formatShortDate(rec.waktu),
+    questions: [],
+    answers: [],
+    fromDatabase: true
+  };
+}
+
+async function syncHistoryFromDatabaseIfEmpty() {
+  const localHistory = getExamHistory();
+  if (localHistory.length > 0) return localHistory;
+  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("TEMPEL_URL")) return [];
+
+  try {
+    const res = await fetch(`${GOOGLE_SCRIPT_URL}?mode=rekap`);
+    const json = await res.json();
+    if (json && json.status === "sukses" && Array.isArray(json.rekap) && json.rekap.length > 0) {
+      const mapped = json.rekap.slice().reverse().map((r, i) => mapRekapRowToSession(r, i));
+      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(mapped.slice(0, 150)));
+      return mapped;
+    }
+  } catch (err) {
+    console.warn("Gagal memuat riwayat dari database:", err);
+  }
+  return [];
+}
+
+function loadAttemptIntoReview(attemptId) {
+  const history = getExamHistory();
+  const found = history.find(h => h.id === attemptId);
+  if (!found) return;
+
+  if (!Array.isArray(found.questions) || found.questions.length === 0) {
+    alert(
+      `Sesi ${found.nama} (${found.waktuLabel || "-"}) berasal dari rekap database — Total Skor: ${found.total} ` +
+      `(TWK ${found.twk} | TIU ${found.tiu} | TKP ${found.tkp} • ${found.status_pg}). ` +
+      "Rincian pembahasan per butir soal hanya tersimpan untuk sesi yang dikerjakan di browser ini."
+    );
+    return;
+  }
+
+  reviewQuestions = found.questions;
+  reviewAnswers = Array.isArray(found.answers) ? found.answers : [];
+  reviewMetaLabel = `Sesi ${found.nama} (${found.waktuLabel || ""}) — Total Skor: ${found.total}`;
+
+  const sec = document.getElementById("reviewSection");
+  sec.classList.remove("hidden");
+  document.getElementById("reviewSectionTitle").textContent = "Pembahasan & Jawaban Sesi Terpilih";
+  document.getElementById("reviewSessionSubtitle").textContent = reviewMetaLabel;
+  renderReview("ALL");
+  sec.scrollIntoView({ behavior: "smooth" });
 }
 
 function exportLocalHistoryToCsv() {
@@ -123,7 +244,7 @@ function renderAttemptHistory() {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold shrink-0";
-    btn.textContent = "Review";
+    btn.textContent = item.fromDatabase ? "Detail" : "Review";
     btn.onclick = () => loadAttemptIntoReview(item.id);
 
     card.append(info, btn);
@@ -171,7 +292,7 @@ function renderDashboardUserPreviousExams() {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shrink-0";
-    btn.textContent = "Review";
+    btn.textContent = item.fromDatabase ? "Detail" : "Review";
     btn.onclick = () => loadAttemptIntoReview(item.id);
 
     card.append(info, btn);
@@ -311,8 +432,7 @@ async function openDashboard() {
 async function refreshDashboardData() {
   const infoEl = document.getElementById("dashboardSourceInfo");
   infoEl.textContent = "Mengambil data rekap skor peserta...";
-  renderDashboardUserPreviousExams();
-  renderUserScoreTrendChart();
+  updateRestoreHistoryButtons();
 
   const localRecords = getExamHistory().map(h => ({
     waktu: h.waktuLabel || "-",
@@ -331,6 +451,8 @@ async function refreshDashboardData() {
   if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("TEMPEL_URL")) {
     dashboardRecords = localRecords;
     infoEl.textContent = `Menampilkan ${dashboardRecords.length} data lokal (browser ini).`;
+    renderDashboardUserPreviousExams();
+    renderUserScoreTrendChart();
     populateDashboardInstitutionFilter();
     renderDashboardTable();
     return;
@@ -340,7 +462,14 @@ async function refreshDashboardData() {
     const res = await fetch(`${GOOGLE_SCRIPT_URL}?mode=rekap`);
     const json = await res.json();
     if (json.status === "sukses" && Array.isArray(json.rekap) && json.rekap.length > 0) {
-      dashboardRecords = json.rekap.slice().reverse();
+      const reversedRekap = json.rekap.slice().reverse();
+      dashboardRecords = reversedRekap;
+
+      if (getExamHistory().length === 0 && !getBackupExamHistory().length) {
+        const mapped = reversedRekap.map((r, i) => mapRekapRowToSession(r, i));
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(mapped.slice(0, 150)));
+      }
+
       infoEl.textContent = `Sumber: Google Sheets (${dashboardRecords.length} data tercatat).`;
     } else {
       dashboardRecords = localRecords;
@@ -351,6 +480,8 @@ async function refreshDashboardData() {
     infoEl.textContent = `Mode offline/lokal (${dashboardRecords.length} data tersimpan di browser).`;
   }
 
+  renderDashboardUserPreviousExams();
+  renderUserScoreTrendChart();
   populateDashboardInstitutionFilter();
   renderDashboardTable();
 }
