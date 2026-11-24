@@ -204,12 +204,13 @@ function startExam(customWeakQuestions = null) {
   currentQuestionEnteredAt = Date.now();
   isExamActive = true;
 
-  const durationMinutes = parseInt(document.getElementById("durationSelect").value, 10);
+  const durationMinutes = parseInt(document.getElementById("durationSelect").value, 10) || 100;
   const orderMode = document.getElementById("orderSelect").value;
-  const focusMode = document.getElementById("subtestFocusSelect")?.value || "ALL";
-  examModeLabel = durationMinutes === 130 ? "Disabilitas (130 Menit)" : "Reguler (100 Menit)";
-  remainingSeconds = durationMinutes * 60;
-  examEndTime = Date.now() + remainingSeconds * 1000;
+  const focusMode = (document.getElementById("subtestFocusSelect")?.value || "ALL").toUpperCase();
+  const isDisability = durationMinutes === 130;
+  let activeMinutes = durationMinutes;
+
+  examModeLabel = isDisability ? "Disabilitas (130 Menit)" : "Reguler (100 Menit)";
 
   if (Array.isArray(customWeakQuestions) && customWeakQuestions.length > 0) {
     const picked = orderMode === "shuffled" ? shuffleArray(customWeakQuestions) : [...customWeakQuestions];
@@ -258,53 +259,40 @@ function startExam(customWeakQuestions = null) {
     }
 
     if (focusMode === "TWK") {
+      activeMinutes = isDisability ? 33 : 25;
       questionBank = buildSubtestQuota("TWK", 30).map((item, idx) => ({
         ...item,
         id: idx + 1
       }));
-      examModeLabel = `${examModeLabel} • Fokus TWK (30 Soal)`;
+      examModeLabel = `${isDisability ? "Disabilitas" : "Reguler"} • Fokus TWK (${activeMinutes} Menit, 30 Soal)`;
     } else if (focusMode === "TIU") {
+      activeMinutes = isDisability ? 52 : 40;
       questionBank = buildSubtestQuota("TIU", 35).map((item, idx) => ({
         ...item,
         id: idx + 1
       }));
-      examModeLabel = `${examModeLabel} • Fokus TIU (35 Soal)`;
+      examModeLabel = `${isDisability ? "Disabilitas" : "Reguler"} • Fokus TIU (${activeMinutes} Menit, 35 Soal)`;
     } else if (focusMode === "TKP") {
+      activeMinutes = isDisability ? 45 : 35;
       questionBank = buildSubtestQuota("TKP", 45).map((item, idx) => ({
         ...item,
         id: idx + 1
       }));
-      examModeLabel = `${examModeLabel} • Fokus TKP (45 Soal)`;
+      examModeLabel = `${isDisability ? "Disabilitas" : "Reguler"} • Fokus TKP (${activeMinutes} Menit, 45 Soal)`;
     } else {
       const twk = buildSubtestQuota("TWK", 30);
       const tiu = buildSubtestQuota("TIU", 35);
       const tkp = buildSubtestQuota("TKP", 45);
-let activeMinutes = durationMinutes;
-
-  if (focusMode === "TWK") {
-    activeMinutes = isDisability ? 33 : 25;
-    examModeLabel = `${isDisability ? "Disabilitas" : "Reguler"} • Fokus TWK (${activeMinutes} Menit, 30 Soal)`;
-  } else if (focusMode === "TIU") {
-    activeMinutes = isDisability ? 52 : 40;
-    examModeLabel = `${isDisability ? "Disabilitas" : "Reguler"} • Fokus TIU (${activeMinutes} Menit, 35 Soal)`;
-  } else if (focusMode === "TKP") {
-    activeMinutes = isDisability ? 45 : 35;
-    examModeLabel = `${isDisability ? "Disabilitas" : "Reguler"} • Fokus TKP (${activeMinutes} Menit, 45 Soal)`;
-  }
-
-  remainingSeconds = activeMinutes * 60;
-  examEndTime = Date.now() + remainingSeconds * 1000;
       questionBank = [...twk, ...tiu, ...tkp].map((item, idx) => ({
         ...item,
         id: idx + 1
       }));
     }
   }
-const durationMinutes = parseInt(document.getElementById("durationSelect").value, 10);
-  const orderMode = document.getElementById("orderSelect").value;
-  const focusMode = document.getElementById("subtestFocusSelect")?.value || "ALL";
-  const isDisability = durationMinutes === 130;
-  examModeLabel = isDisability ? "Disabilitas (130 Menit)" : "Reguler (100 Menit)";
+
+  remainingSeconds = activeMinutes * 60;
+  examEndTime = Date.now() + remainingSeconds * 1000;
+
   userAnswers = new Array(questionBank.length).fill(null);
   doubtFlags = new Array(questionBank.length).fill(false);
   questionDurations = new Array(questionBank.length).fill(0);
