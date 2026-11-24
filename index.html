@@ -39,7 +39,10 @@
        ===================================================================== -->
   <script>
     const GOOGLE_SCRIPT_URL =
-      "https://script.google.com/macros/s/AKfycbyBj65VLsxCRLJo5yLV4JNHPmlcq6LX9Y9R3lak-O0eRXqyd6vXcZZiB8K8XJDdaIq43A/exec";
+      "https://script.google.com/macros/s/AKfycbwov2aAUu1cnJHSbGiy_a0u8C5YgP2iqDoU2HIxyXc85u8jNttVOamgwTt1xg89DbR2/exec";
+    const SESSION_STORAGE_KEY = "cat_skd_active_session_v1";
+    const AUTH_STORAGE_KEY = "cat_skd_logged_user_v1";
+    const HISTORY_STORAGE_KEY = "cat_skd_exam_history_v1";
   </script>
 
   <!-- HEADER UTAMA -->
@@ -52,6 +55,21 @@
           <p class="text-xs text-slate-300">KepmenPANRB No. 321 Tahun 2024 • Dibuat oleh <span class="text-amber-400 font-semibold">Best D Pamungkas</span></p>
         </div>
       </div>
+
+      <!-- Tombol Navigasi Non-Ujian -->
+      <div id="navHeaderControls" class="flex items-center gap-2">
+        <button onclick="showScreen('setup')" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-100 text-xs font-semibold px-3 py-2 rounded-lg transition">
+          Beranda Ujian
+        </button>
+        <button onclick="openDashboard()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition">
+          Dashboard Skor
+        </button>
+        <button id="logoutBtn" onclick="logoutParticipant()" class="hidden bg-slate-800 hover:bg-rose-600 text-slate-200 text-xs font-semibold px-3 py-2 rounded-lg transition">
+          Keluar
+        </button>
+      </div>
+
+      <!-- Kontrol Saat Ujian Berlangsung -->
       <div id="examHeaderControls" class="hidden items-center gap-3">
         <div class="hidden sm:block text-right">
           <div id="headerParticipantName" class="text-xs font-semibold text-slate-200"></div>
@@ -68,8 +86,8 @@
     </div>
   </header>
 
-  <!-- HALAMAN 1: BERANDA & KONFIGURASI PESERTA -->
-  <main id="setupScreen" class="flex-1 max-w-5xl w-full mx-auto px-4 py-8">
+  <!-- HALAMAN 1: LOGIN & KONFIGURASI PESERTA -->
+  <main id="setupScreen" class="flex-1 max-w-5xl w-full mx-auto px-4 py-8 space-y-6">
     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
       <div class="bg-gradient-to-r from-blue-900 via-blue-800 to-slate-900 p-6 sm:p-8 text-white">
         <span id="heroQuestionSummaryBadge" class="inline-block bg-blue-500/20 border border-blue-400/30 text-blue-200 text-xs font-semibold px-3 py-1 rounded-full mb-3">
@@ -77,12 +95,46 @@
         </span>
         <h2 class="text-2xl sm:text-3xl font-extrabold mb-2">Computer Assisted Test (CAT) SKD CPNS</h2>
         <p class="text-sm text-blue-100 max-w-2xl">
-          Latihan simulasi resmi berbasis waktu dengan ambang batas kelulusan (Passing Grade) sesuai ketentuan BKN dan pengiriman rekap nilai otomatis ke Google Sheets.
+          Login peserta untuk menyimpan riwayat ujian sebelum & sesudah, mereview jawaban kapan saja, dan memantau dashboard skor seluruh peserta.
         </p>
       </div>
 
+      <!-- Kartu Login Peserta -->
+      <div id="loginCard" class="p-6 sm:p-8 border-b border-slate-200 bg-slate-50/70">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <div>
+            <h3 class="text-base font-extrabold text-slate-800">Login Peserta Simulasi</h3>
+            <p class="text-xs text-slate-500">Masuk dengan Nama Lengkap dan PIN (4–8 digit) untuk mengelompokkan riwayat ujian Anda.</p>
+          </div>
+          <span id="activeSessionBadge" class="hidden text-xs font-bold bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full"></span>
+        </div>
+
+        <div id="loginFormGrid" class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+          <div>
+            <label for="loginNameInput" class="block text-xs font-bold text-slate-700 mb-1.5">
+              Nama Lengkap Peserta <span class="text-rose-600">*</span>
+            </label>
+            <input type="text" id="loginNameInput" placeholder="Contoh: Budiman Putra"
+              class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" />
+          </div>
+          <div>
+            <label for="loginPinInput" class="block text-xs font-bold text-slate-700 mb-1.5">
+              PIN Akses (Min. 4 Karakter) <span class="text-rose-600">*</span>
+            </label>
+            <input type="password" id="loginPinInput" maxlength="8" placeholder="Contoh: 1234"
+              class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" />
+          </div>
+          <div>
+            <button type="button" onclick="loginParticipant()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition">
+              Masuk / Daftar Peserta
+            </button>
+          </div>
+        </div>
+        <p id="loginWarningText" class="hidden text-xs font-semibold text-rose-600 mt-2"></p>
+      </div>
+
       <div class="p-6 sm:p-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <!-- Form Konfigurasi -->
+        <!-- Form Konfigurasi Ujian -->
         <div class="lg:col-span-2 space-y-5">
           <div>
             <label for="participantNameInput" class="block text-sm font-bold text-slate-700 mb-1.5">
@@ -94,7 +146,6 @@
             <p class="text-xs text-slate-500 mt-1">Nama ini akan tercatat pada hasil ujian dan rekap database Google Sheets.</p>
           </div>
 
-          <!-- Formasi & Instansi yang Dilamar (Bebas Diketik Peserta) -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label for="appliedFormationInput" class="block text-sm font-bold text-slate-700 mb-1.5">
@@ -175,7 +226,7 @@
               <span id="scriptConfigBadge" class="font-semibold"></span>
             </div>
             <div id="bankLoadStatus" class="text-slate-600 font-medium"></div>
-            <div class="text-slate-400">Pintasan keyboard: tombol A–E pilih jawaban, ← / → pindah soal.</div>
+            <div class="text-slate-400">Auto-save aktif: aman jika halaman ter-refresh.</div>
           </div>
         </div>
       </div>
@@ -246,7 +297,7 @@
     </div>
   </section>
 
-  <!-- HALAMAN 3: HASIL UJIAN & PEMBAHASAN -->
+  <!-- HALAMAN 3: HASIL UJIAN, RIWAYAT SEBELUM/SESUDAH & PEMBAHASAN -->
   <section id="resultScreen" class="hidden flex-1 max-w-6xl w-full mx-auto px-4 py-8 space-y-6">
     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
       <div id="resultBanner" class="p-6 sm:p-8 text-white bg-slate-900 flex flex-wrap items-center justify-between gap-4">
@@ -309,9 +360,26 @@
         </div>
       </div>
 
+      <!-- Riwayat Ujian Sebelum & Sesudah Peserta -->
+      <div class="px-6 pb-4">
+        <div class="border border-slate-200 rounded-xl p-4 bg-slate-50 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 class="text-sm font-extrabold text-slate-800">Riwayat Ujian Sebelum & Sesudah (Klik untuk Review)</h3>
+              <p class="text-[11px] text-slate-500">Bandingkan perkembangan skor dan buka pembahasan tiap sesi ujian.</p>
+            </div>
+            <span id="historyCountBadge" class="text-xs font-bold text-blue-700 bg-blue-100 px-2.5 py-1 rounded-full">0 Sesi</span>
+          </div>
+          <div id="attemptHistoryList" class="grid grid-cols-1 md:grid-cols-2 gap-2.5 max-h-56 overflow-y-auto custom-scroll pr-1"></div>
+        </div>
+      </div>
+
       <div class="px-6 pb-6 flex flex-wrap gap-3">
-        <button onclick="location.reload()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl">
+        <button onclick="resetAndRestartFromSetup()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl">
           Ulangi Simulasi Baru
+        </button>
+        <button onclick="openDashboard()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl">
+          Lihat Dashboard Semua Skor
         </button>
         <button id="toggleReviewBtn" onclick="toggleReviewSection()" class="bg-slate-800 hover:bg-slate-900 text-white text-sm font-bold px-5 py-2.5 rounded-xl">
           Lihat Kunci Jawaban & Pembahasan (110 Soal)
@@ -322,7 +390,10 @@
     <!-- Pembahasan Soal -->
     <div id="reviewSection" class="hidden bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
       <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-3">
-        <h3 class="font-extrabold text-lg text-slate-800">Pembahasan Lengkap Soal SKD</h3>
+        <div>
+          <h3 id="reviewSectionTitle" class="font-extrabold text-lg text-slate-800">Pembahasan Lengkap Soal SKD</h3>
+          <p id="reviewSessionSubtitle" class="text-xs text-slate-500"></p>
+        </div>
         <div class="flex gap-1.5">
           <button onclick="renderReview('ALL')" class="px-3 py-1 text-xs font-bold rounded-lg bg-slate-800 text-white">Semua</button>
           <button onclick="renderReview('TWK')" class="px-3 py-1 text-xs font-bold rounded-lg bg-slate-100 text-slate-700">TWK</button>
@@ -336,6 +407,77 @@
     <footer class="text-center text-xs text-slate-500 pb-4">
       Simulasi CAT SKD CPNS BKN • Dibuat oleh <strong class="text-slate-700">Best D Pamungkas</strong>
     </footer>
+  </section>
+
+  <!-- HALAMAN 4: DASHBOARD SEMUA SKOR PESERTA -->
+  <section id="dashboardScreen" class="hidden flex-1 max-w-7xl w-full mx-auto px-4 py-8 space-y-6">
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="bg-gradient-to-r from-slate-900 via-blue-900 to-blue-800 p-6 sm:p-7 text-white flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <span class="inline-block bg-amber-400/20 border border-amber-300/30 text-amber-200 text-xs font-semibold px-3 py-1 rounded-full mb-2">
+            Rekapitulasi & Peringkat Peserta
+          </span>
+          <h2 class="text-2xl font-extrabold">Dashboard Semua Skor Peserta</h2>
+          <p id="dashboardSourceInfo" class="text-xs text-blue-100 mt-1">Memuat data skor peserta...</p>
+        </div>
+        <button onclick="refreshDashboardData()" class="bg-white/15 hover:bg-white/25 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition">
+          Muat Ulang Data Skor
+        </button>
+      </div>
+
+      <!-- Kartu Statistik -->
+      <div class="p-6 grid grid-cols-2 lg:grid-cols-4 gap-4 border-b border-slate-200">
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+          <div class="text-xs font-semibold text-slate-500">Total Percobaan</div>
+          <div id="dashTotalAttempts" class="text-2xl font-extrabold text-slate-900 mt-1">0</div>
+        </div>
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+          <div class="text-xs font-semibold text-slate-500">Skor Tertinggi</div>
+          <div id="dashHighestScore" class="text-2xl font-extrabold text-emerald-700 mt-1">0</div>
+        </div>
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+          <div class="text-xs font-semibold text-slate-500">Rata-Rata Skor</div>
+          <div id="dashAverageScore" class="text-2xl font-extrabold text-blue-700 mt-1">0</div>
+        </div>
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+          <div class="text-xs font-semibold text-slate-500">Lulus Passing Grade</div>
+          <div id="dashPassCount" class="text-2xl font-extrabold text-amber-600 mt-1">0</div>
+        </div>
+      </div>
+
+      <!-- Filter Pencarian -->
+      <div class="p-6 pb-3 flex flex-wrap items-center justify-between gap-3">
+        <input type="text" id="dashboardSearchInput" oninput="renderDashboardTable()"
+          placeholder="Cari nama peserta, formasi, atau instansi..."
+          class="w-full sm:w-80 px-3.5 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:ring-2 focus:ring-blue-600 outline-none" />
+        <select id="dashboardFilterPg" onchange="renderDashboardTable()"
+          class="px-3.5 py-2 rounded-xl border border-slate-300 bg-white text-xs sm:text-sm font-medium focus:ring-2 focus:ring-blue-600 outline-none">
+          <option value="ALL">Semua Status PG</option>
+          <option value="LULUS PG">LULUS PG</option>
+          <option value="TIDAK LULUS PG">TIDAK LULUS PG</option>
+        </select>
+      </div>
+
+      <!-- Tabel Semua Skor -->
+      <div class="px-6 pb-6 overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs sm:text-sm">
+          <thead>
+            <tr class="bg-slate-100 text-slate-700 border-b border-slate-200">
+              <th class="py-2.5 px-3 font-bold">#</th>
+              <th class="py-2.5 px-3 font-bold">Nama Peserta</th>
+              <th class="py-2.5 px-3 font-bold">Formasi & Instansi</th>
+              <th class="py-2.5 px-3 font-bold text-center">TWK</th>
+              <th class="py-2.5 px-3 font-bold text-center">TIU</th>
+              <th class="py-2.5 px-3 font-bold text-center">TKP</th>
+              <th class="py-2.5 px-3 font-bold text-center">Total</th>
+              <th class="py-2.5 px-3 font-bold text-center">Status PG</th>
+              <th class="py-2.5 px-3 font-bold">Waktu</th>
+            </tr>
+          </thead>
+          <tbody id="dashboardTableBody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </div>
   </section>
 
   <script>
@@ -697,12 +839,17 @@
     }
 
     let questionBank = buildDefaultQuestionBank();
+    let reviewQuestions = [];
+    let reviewAnswers = [];
+    let reviewMetaLabel = "";
     let userAnswers = [];
     let doubtFlags = [];
     let currentIndex = 0;
     let currentFilter = "ALL";
     let timerInterval = null;
     let remainingSeconds = 100 * 60;
+    let examEndTime = 0;
+    let loggedUser = null;
     let participantName = "";
     let appliedFormation = "";
     let appliedInstitution = "";
@@ -710,14 +857,436 @@
     let lastExamPayload = null;
     let examStartedAt = 0;
     let isExamActive = false;
+    let dashboardRecords = [];
+
+    // =========================================================================
+    // NAVIGASI LAYAR & LOGIN PESERTA
+    // =========================================================================
+    function showScreen(screenName) {
+      if (isExamActive && screenName !== "exam") {
+        alert("Ujian sedang berlangsung. Selesaikan ujian terlebih dahulu.");
+        return;
+      }
+
+      document.getElementById("setupScreen").classList.toggle("hidden", screenName !== "setup");
+      document.getElementById("examScreen").classList.toggle("hidden", screenName !== "exam");
+      document.getElementById("resultScreen").classList.toggle("hidden", screenName !== "result");
+      document.getElementById("dashboardScreen").classList.toggle("hidden", screenName !== "dashboard");
+
+      const isExam = screenName === "exam";
+      document.getElementById("navHeaderControls").classList.toggle("hidden", isExam);
+      document.getElementById("examHeaderControls").classList.toggle("hidden", !isExam);
+      if (isExam) {
+        document.getElementById("examHeaderControls").classList.add("flex");
+      } else {
+        document.getElementById("examHeaderControls").classList.remove("flex");
+      }
+
+      if (screenName === "dashboard") {
+        refreshDashboardData();
+      } else if (screenName === "result") {
+        renderAttemptHistory();
+      }
+    }
+
+    function loadLoggedUserFromStorage() {
+      try {
+        const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.nama) {
+          loggedUser = parsed;
+          applyLoggedUserToUI();
+        }
+      } catch (err) {}
+    }
+
+    function applyLoggedUserToUI() {
+      const badge = document.getElementById("activeSessionBadge");
+      const logoutBtn = document.getElementById("logoutBtn");
+      const nameInput = document.getElementById("participantNameInput");
+      const loginName = document.getElementById("loginNameInput");
+
+      if (loggedUser && loggedUser.nama) {
+        badge.textContent = `Login: ${loggedUser.nama} (PIN: ${loggedUser.pin})`;
+        badge.classList.remove("hidden");
+        logoutBtn.classList.remove("hidden");
+        if (nameInput && !nameInput.value.trim()) {
+          nameInput.value = loggedUser.nama;
+        }
+        if (loginName) loginName.value = loggedUser.nama;
+      } else {
+        badge.classList.add("hidden");
+        logoutBtn.classList.add("hidden");
+      }
+    }
+
+    function loginParticipant() {
+      const nameVal = document.getElementById("loginNameInput").value.trim();
+      const pinVal = document.getElementById("loginPinInput").value.trim();
+      const warnEl = document.getElementById("loginWarningText");
+
+      if (!nameVal || nameVal.length < 2) {
+        warnEl.textContent = "Masukkan nama peserta terlebih dahulu.";
+        warnEl.classList.remove("hidden");
+        return;
+      }
+      if (findProfanityInName(nameVal).length > 0) {
+        warnEl.textContent = "Nama mengandung kata tidak sopan.";
+        warnEl.classList.remove("hidden");
+        return;
+      }
+      if (!pinVal || pinVal.length < 4) {
+        warnEl.textContent = "PIN akses minimal 4 karakter.";
+        warnEl.classList.remove("hidden");
+        return;
+      }
+
+      warnEl.classList.add("hidden");
+      loggedUser = { nama: nameVal, pin: pinVal };
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(loggedUser));
+      document.getElementById("participantNameInput").value = nameVal;
+      applyLoggedUserToUI();
+      renderAttemptHistory();
+    }
+
+    function logoutParticipant() {
+      if (!confirm("Keluar dari akun peserta saat ini?")) return;
+      loggedUser = null;
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+      applyLoggedUserToUI();
+      renderAttemptHistory();
+    }
+
+    // =========================================================================
+    // RIWAYAT UJIAN SEBELUM & SESUDAH (UNTUK REVIEW KEMBALI)
+    // =========================================================================
+    function getExamHistory() {
+      try {
+        const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
+        const list = raw ? JSON.parse(raw) : [];
+        return Array.isArray(list) ? list : [];
+      } catch (err) {
+        return [];
+      }
+    }
+
+    function saveAttemptToHistory(attemptRecord) {
+      const history = getExamHistory();
+      history.unshift(attemptRecord);
+      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history.slice(0, 50)));
+    }
+
+    function renderAttemptHistory() {
+      const allHistory = getExamHistory();
+      const filtered = loggedUser && loggedUser.nama
+        ? allHistory.filter(item => String(item.nama || "").toLowerCase() === loggedUser.nama.toLowerCase())
+        : allHistory;
+
+      const listEl = document.getElementById("attemptHistoryList");
+      const countBadge = document.getElementById("historyCountBadge");
+      if (!listEl || !countBadge) return;
+
+      countBadge.textContent = `${filtered.length} Sesi`;
+      listEl.replaceChildren();
+
+      if (filtered.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "col-span-full text-xs text-slate-500 py-2";
+        empty.textContent = "Belum ada riwayat sesi tersimpan untuk review.";
+        listEl.appendChild(empty);
+        return;
+      }
+
+      filtered.forEach((item, idx) => {
+        const urutanLabel = idx === 0 ? "Terbaru (Sesudah)" : `Sebelumnya #${filtered.length - idx}`;
+        const card = document.createElement("div");
+        card.className = "bg-white border border-slate-200 rounded-xl p-3 flex items-center justify-between gap-3";
+
+        const info = document.createElement("div");
+        info.innerHTML = `
+          <div class="text-xs font-extrabold text-slate-800">${urutanLabel} • Skor ${item.total}</div>
+          <div class="text-[11px] text-slate-500">TWK ${item.twk} | TIU ${item.tiu} | TKP ${item.tkp} • ${item.status_pg}</div>
+          <div class="text-[10px] text-slate-400">${item.waktuLabel || ""}</div>
+        `;
+
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold shrink-0";
+        btn.textContent = "Review";
+        btn.onclick = () => loadAttemptIntoReview(item.id);
+
+        card.append(info, btn);
+        listEl.appendChild(card);
+      });
+    }
+
+    function loadAttemptIntoReview(attemptId) {
+      const history = getExamHistory();
+      const found = history.find(h => h.id === attemptId);
+      if (!found || !Array.isArray(found.questions)) return;
+
+      reviewQuestions = found.questions;
+      reviewAnswers = Array.isArray(found.answers) ? found.answers : [];
+      reviewMetaLabel = `Sesi ${found.nama} (${found.waktuLabel || ""}) — Total Skor: ${found.total}`;
+
+      const sec = document.getElementById("reviewSection");
+      sec.classList.remove("hidden");
+      document.getElementById("reviewSectionTitle").textContent = "Pembahasan & Jawaban Sesi Terpilih";
+      document.getElementById("reviewSessionSubtitle").textContent = reviewMetaLabel;
+      renderReview("ALL");
+      sec.scrollIntoView({ behavior: "smooth" });
+    }
+
+    // =========================================================================
+    // DASHBOARD SEMUA SKOR PESERTA
+    // =========================================================================
+    async function openDashboard() {
+      showScreen("dashboard");
+    }
+
+    async function refreshDashboardData() {
+      const infoEl = document.getElementById("dashboardSourceInfo");
+      infoEl.textContent = "Mengambil data rekap skor peserta...";
+
+      const localRecords = getExamHistory().map(h => ({
+        waktu: h.waktuLabel || "-",
+        nama: h.nama || "Peserta",
+        pin: h.pin || "-",
+        formasi: h.formasi || "-",
+        instansi: h.instansi || "-",
+        mode: h.mode || "-",
+        twk: Number(h.twk || 0),
+        tiu: Number(h.tiu || 0),
+        tkp: Number(h.tkp || 0),
+        total: Number(h.total || 0),
+        status_pg: h.status_pg || "-",
+        warning: h.warning || "Normal"
+      }));
+
+      if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("TEMPEL_URL")) {
+        dashboardRecords = localRecords;
+        infoEl.textContent = `Menampilkan ${dashboardRecords.length} data lokal (browser ini).`;
+        renderDashboardTable();
+        return;
+      }
+
+      try {
+        const res = await fetch(`${GOOGLE_SCRIPT_URL}?mode=rekap`);
+        const json = await res.json();
+        if (json.status === "sukses" && Array.isArray(json.rekap) && json.rekap.length > 0) {
+          dashboardRecords = json.rekap.slice().reverse();
+          infoEl.textContent = `Sumber: Google Sheets (${dashboardRecords.length} data tercatat).`;
+        } else {
+          dashboardRecords = localRecords;
+          infoEl.textContent = `Menampilkan ${dashboardRecords.length} data lokal.`;
+        }
+      } catch (err) {
+        dashboardRecords = localRecords;
+        infoEl.textContent = `Mode offline/lokal (${dashboardRecords.length} data tersimpan di browser).`;
+      }
+
+      renderDashboardTable();
+    }
+
+    function renderDashboardTable() {
+      const qText = (document.getElementById("dashboardSearchInput")?.value || "").trim().toLowerCase();
+      const pgFilter = document.getElementById("dashboardFilterPg")?.value || "ALL";
+
+      const filtered = dashboardRecords.filter(rec => {
+        const matchPg = pgFilter === "ALL" || rec.status_pg === pgFilter;
+        const hay = `${rec.nama} ${rec.formasi} ${rec.instansi}`.toLowerCase();
+        const matchText = !qText || hay.includes(qText);
+        return matchPg && matchText;
+      });
+
+      const totalAttempts = filtered.length;
+      const highestScore = totalAttempts > 0 ? Math.max(...filtered.map(r => Number(r.total || 0))) : 0;
+      const avgScore = totalAttempts > 0
+        ? Math.round(filtered.reduce((acc, r) => acc + Number(r.total || 0), 0) / totalAttempts)
+        : 0;
+      const passCount = filtered.filter(r => r.status_pg === "LULUS PG").length;
+
+      document.getElementById("dashTotalAttempts").textContent = totalAttempts;
+      document.getElementById("dashHighestScore").textContent = highestScore;
+      document.getElementById("dashAverageScore").textContent = avgScore;
+      document.getElementById("dashPassCount").textContent = passCount;
+
+      const tbody = document.getElementById("dashboardTableBody");
+      tbody.replaceChildren();
+
+      if (filtered.length === 0) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td colspan="9" class="py-6 px-4 text-center text-slate-500">Belum ada data skor peserta yang sesuai filter.</td>`;
+        tbody.appendChild(tr);
+        return;
+      }
+
+      filtered.forEach((rec, i) => {
+        const tr = document.createElement("tr");
+        tr.className = "hover:bg-slate-50";
+        const isPass = rec.status_pg === "LULUS PG";
+        const badgeClass = isPass
+          ? "bg-emerald-100 text-emerald-800"
+          : "bg-rose-100 text-rose-800";
+
+        tr.innerHTML = `
+          <td class="py-2.5 px-3 font-semibold text-slate-500">${i + 1}</td>
+          <td class="py-2.5 px-3 font-bold text-slate-800">${escapeHtml(rec.nama)}</td>
+          <td class="py-2.5 px-3 text-slate-600">
+            <div class="font-medium text-slate-800">${escapeHtml(rec.formasi)}</div>
+            <div class="text-xs text-slate-500">${escapeHtml(rec.instansi)}</div>
+          </td>
+          <td class="py-2.5 px-3 text-center font-semibold">${rec.twk}</td>
+          <td class="py-2.5 px-3 text-center font-semibold">${rec.tiu}</td>
+          <td class="py-2.5 px-3 text-center font-semibold">${rec.tkp}</td>
+          <td class="py-2.5 px-3 text-center font-extrabold text-blue-700">${rec.total}</td>
+          <td class="py-2.5 px-3 text-center">
+            <span class="text-xs font-bold px-2 py-0.5 rounded ${badgeClass}">${escapeHtml(rec.status_pg)}</span>
+          </td>
+          <td class="py-2.5 px-3 text-xs text-slate-500">${escapeHtml(rec.waktu)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function escapeHtml(str) {
+      return String(str || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    // =========================================================================
+    // AUTO-SAVE & PEMULIHAN SESI SAAT HALAMAN DI-REFRESH
+    // =========================================================================
+    function saveExamSessionToStorage() {
+      if (!isExamActive) return;
+      try {
+        const snapshot = {
+          participantName,
+          appliedFormation,
+          appliedInstitution,
+          examModeLabel,
+          examStartedAt,
+          examEndTime,
+          currentIndex,
+          currentFilter,
+          questionBank,
+          userAnswers,
+          doubtFlags
+        };
+        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(snapshot));
+      } catch (err) {
+        console.warn("Gagal menyimpan sesi ke localStorage:", err);
+      }
+    }
+
+    function clearExamSessionFromStorage() {
+      try {
+        localStorage.removeItem(SESSION_STORAGE_KEY);
+      } catch (err) {}
+    }
+
+    function enterExamWorkspaceUI() {
+      document.getElementById("setupScreen").classList.add("hidden");
+      document.getElementById("resultScreen").classList.add("hidden");
+      document.getElementById("dashboardScreen").classList.add("hidden");
+      document.getElementById("examScreen").classList.remove("hidden");
+
+      document.getElementById("navHeaderControls").classList.add("hidden");
+      const headerCtrl = document.getElementById("examHeaderControls");
+      headerCtrl.classList.remove("hidden");
+      headerCtrl.classList.add("flex");
+
+      document.getElementById("headerParticipantName").textContent = `${participantName} • ${appliedInstitution}`;
+      document.getElementById("headerExamMode").textContent = `${appliedFormation} (${examModeLabel})`;
+    }
+
+    function tryRestoreExamSession() {
+      try {
+        const raw = localStorage.getItem(SESSION_STORAGE_KEY);
+        if (!raw) return false;
+
+        const snap = JSON.parse(raw);
+        if (
+          !snap ||
+          !Array.isArray(snap.questionBank) ||
+          snap.questionBank.length === 0 ||
+          !snap.examEndTime
+        ) {
+          clearExamSessionFromStorage();
+          return false;
+        }
+
+        const secsLeft = Math.floor((Number(snap.examEndTime) - Date.now()) / 1000);
+
+        participantName = snap.participantName || "Peserta Umum";
+        appliedFormation = snap.appliedFormation || "-";
+        appliedInstitution = snap.appliedInstitution || "Kementerian Pertahanan";
+        examModeLabel = snap.examModeLabel || "Reguler (100 Menit)";
+        examStartedAt = Number(snap.examStartedAt) || Date.now();
+        examEndTime = Number(snap.examEndTime);
+        questionBank = snap.questionBank;
+        userAnswers = Array.isArray(snap.userAnswers)
+          ? snap.userAnswers
+          : new Array(questionBank.length).fill(null);
+        doubtFlags = Array.isArray(snap.doubtFlags)
+          ? snap.doubtFlags
+          : new Array(questionBank.length).fill(false);
+        currentIndex = Math.min(Math.max(Number(snap.currentIndex) || 0, 0), questionBank.length - 1);
+        currentFilter = snap.currentFilter || "ALL";
+
+        if (secsLeft <= 0) {
+          remainingSeconds = 0;
+          isExamActive = false;
+          clearExamSessionFromStorage();
+          alert("Waktu ujian yang sedang berjalan telah habis saat halaman dimuat ulang. Hasil akan dikumpulkan otomatis.");
+          finishExam();
+          return true;
+        }
+
+        const shouldResume = confirm(
+          `Ditemukan sesi ujian aktif atas nama "${participantName}" dengan sisa waktu ${Math.floor(secsLeft / 60)} menit ${secsLeft % 60} detik.\n\n` +
+          "Klik OK untuk MELANJUTKAN ujian dari soal terakhir, atau Batal untuk memulai ulang dari awal."
+        );
+
+        if (!shouldResume) {
+          clearExamSessionFromStorage();
+          return false;
+        }
+
+        remainingSeconds = secsLeft;
+        isExamActive = true;
+        enterExamWorkspaceUI();
+        filterNav(currentFilter);
+        renderQuestion();
+        renderGrid();
+        startTimer();
+        return true;
+      } catch (err) {
+        clearExamSessionFromStorage();
+        return false;
+      }
+    }
+
+    function resetAndRestartFromSetup() {
+      clearInterval(timerInterval);
+      isExamActive = false;
+      clearExamSessionFromStorage();
+      document.getElementById("reviewSection").classList.add("hidden");
+      showScreen("setup");
+    }
 
     // =========================================================================
     // PROTEKSI REFRESH / TUTUP TAB SAAT UJIAN BERLANGSUNG
     // =========================================================================
     window.addEventListener("beforeunload", (e) => {
       if (isExamActive) {
+        saveExamSessionToStorage();
         e.preventDefault();
-        e.returnValue = "Ujian simulasi CAT sedang berlangsung. Yakin ingin meninggalkan halaman?";
+        e.returnValue = "Ujian simulasi CAT sedang berlangsung. Progres otomatis tersimpan jika halaman di-refresh.";
         return e.returnValue;
       }
     });
@@ -1021,6 +1590,7 @@
       const orderMode = document.getElementById("orderSelect").value;
       examModeLabel = durationMinutes === 130 ? "Disabilitas (130 Menit)" : "Reguler (100 Menit)";
       remainingSeconds = durationMinutes * 60;
+      examEndTime = Date.now() + remainingSeconds * 1000;
 
       const defaultBank = buildDefaultQuestionBank();
 
@@ -1075,25 +1645,20 @@
       userAnswers = new Array(questionBank.length).fill(null);
       doubtFlags = new Array(questionBank.length).fill(false);
       currentIndex = 0;
+      currentFilter = "ALL";
 
-      document.getElementById("setupScreen").classList.add("hidden");
-      document.getElementById("examScreen").classList.remove("hidden");
-      const headerCtrl = document.getElementById("examHeaderControls");
-      headerCtrl.classList.remove("hidden");
-      headerCtrl.classList.add("flex");
-
-      document.getElementById("headerParticipantName").textContent = `${participantName} • ${appliedInstitution}`;
-      document.getElementById("headerExamMode").textContent = `${appliedFormation} (${examModeLabel})`;
-
+      enterExamWorkspaceUI();
+      saveExamSessionToStorage();
       renderQuestion();
       renderGrid();
       startTimer();
     }
 
     function startTimer() {
+      clearInterval(timerInterval);
       updateTimerDisplay();
       timerInterval = setInterval(() => {
-        remainingSeconds--;
+        remainingSeconds = Math.max(0, Math.floor((examEndTime - Date.now()) / 1000));
         updateTimerDisplay();
         if (remainingSeconds <= 0) {
           clearInterval(timerInterval);
@@ -1111,6 +1676,9 @@
       if (remainingSeconds <= 300) {
         el.classList.remove("text-emerald-400");
         el.classList.add("text-rose-400");
+      } else {
+        el.classList.remove("text-rose-400");
+        el.classList.add("text-emerald-400");
       }
     }
 
@@ -1176,18 +1744,21 @@
       const q = questionBank[currentIndex];
       if (!q || !Array.isArray(q.options) || optIdx < 0 || optIdx >= q.options.length) return;
       userAnswers[currentIndex] = optIdx;
+      saveExamSessionToStorage();
       renderQuestion();
       renderGrid();
     }
 
     function toggleDoubt() {
       doubtFlags[currentIndex] = !doubtFlags[currentIndex];
+      saveExamSessionToStorage();
       renderGrid();
     }
 
     function prevQuestion() {
       if (currentIndex > 0) {
         currentIndex--;
+        saveExamSessionToStorage();
         renderQuestion();
         renderGrid();
       }
@@ -1196,6 +1767,7 @@
     function saveAndNext() {
       if (currentIndex < questionBank.length - 1) {
         currentIndex++;
+        saveExamSessionToStorage();
         renderQuestion();
         renderGrid();
       } else {
@@ -1238,6 +1810,7 @@
           btn.className = "nav-filter-btn flex-1 py-1.5 text-xs font-bold rounded-lg bg-slate-100 text-slate-700";
         }
       });
+      if (isExamActive) saveExamSessionToStorage();
       renderGrid();
     }
 
@@ -1251,6 +1824,7 @@
         btn.textContent = idx + 1;
         btn.onclick = () => {
           currentIndex = idx;
+          saveExamSessionToStorage();
           renderQuestion();
           renderGrid();
         };
@@ -1371,6 +1945,7 @@
     async function finishExam() {
       clearInterval(timerInterval);
       isExamActive = false;
+      clearExamSessionFromStorage();
 
       let twkScore = 0;
       let tiuScore = 0;
@@ -1397,11 +1972,14 @@
 
       document.getElementById("examScreen").classList.add("hidden");
       document.getElementById("examHeaderControls").classList.add("hidden");
+      document.getElementById("examHeaderControls").classList.remove("flex");
+      document.getElementById("navHeaderControls").classList.remove("hidden");
       document.getElementById("resultScreen").classList.remove("hidden");
 
+      const finishTimeLabel = new Date().toLocaleString("id-ID");
       document.getElementById("resultParticipantTitle").textContent = `Hasil Ujian: ${participantName}`;
       document.getElementById("resultFormationInfo").textContent = `${appliedFormation} • ${appliedInstitution}`;
-      document.getElementById("resultMetaInfo").textContent = `${examModeLabel} • Selesai pada ${new Date().toLocaleString("id-ID")}`;
+      document.getElementById("resultMetaInfo").textContent = `${examModeLabel} • Selesai pada ${finishTimeLabel}`;
       document.getElementById("totalScoreDisplay").textContent = totalScore;
 
       const statusBadge = document.getElementById("resultStatusBadge");
@@ -1452,8 +2030,34 @@
         if (alertBox) alertBox.classList.add("hidden");
       }
 
+      const activePin = loggedUser && loggedUser.pin ? loggedUser.pin : "-";
+
+      saveAttemptToHistory({
+        id: `att_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        nama: participantName,
+        pin: activePin,
+        formasi: appliedFormation,
+        instansi: appliedInstitution,
+        mode: examModeLabel,
+        twk: twkScore,
+        tiu: tiuScore,
+        tkp: tkpScore,
+        total: totalScore,
+        status_pg: statusPG,
+        warning: warningText,
+        waktuLabel: finishTimeLabel,
+        questions: questionBank.map(q => ({ ...q })),
+        answers: [...userAnswers]
+      });
+
+      reviewQuestions = questionBank.map(q => ({ ...q }));
+      reviewAnswers = [...userAnswers];
+      reviewMetaLabel = `Sesi Terbaru — ${participantName} (${finishTimeLabel})`;
+      renderAttemptHistory();
+
       lastExamPayload = {
         nama: participantName,
+        pin: activePin,
         formasi: appliedFormation,
         instansi: appliedInstitution,
         mode: examModeLabel,
@@ -1528,6 +2132,12 @@
       const sec = document.getElementById("reviewSection");
       sec.classList.toggle("hidden");
       if (!sec.classList.contains("hidden")) {
+        if (!reviewQuestions.length) {
+          reviewQuestions = questionBank;
+          reviewAnswers = userAnswers;
+        }
+        document.getElementById("reviewSectionTitle").textContent = "Pembahasan Lengkap Soal SKD";
+        document.getElementById("reviewSessionSubtitle").textContent = reviewMetaLabel;
         renderReview("ALL");
       }
     }
@@ -1535,12 +2145,14 @@
     function renderReview(filterSubtest) {
       const list = document.getElementById("reviewList");
       const letters = ["A", "B", "C", "D", "E"];
+      const sourceQuestions = reviewQuestions.length ? reviewQuestions : questionBank;
+      const sourceAnswers = reviewAnswers.length ? reviewAnswers : userAnswers;
       list.replaceChildren();
 
-      questionBank.forEach((q, idx) => {
+      sourceQuestions.forEach((q, idx) => {
         if (filterSubtest !== "ALL" && q.subtest !== filterSubtest) return;
 
-        const userAns = userAnswers[idx];
+        const userAns = sourceAnswers[idx] ?? null;
         const card = document.createElement("div");
         card.className =
           "p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2";
@@ -1624,6 +2236,9 @@
     }
 
     window.addEventListener("DOMContentLoaded", () => {
+      loadLoggedUserFromStorage();
+      renderAttemptHistory();
+
       const nameInput = document.getElementById("participantNameInput");
       if (nameInput) {
         nameInput.addEventListener("input", validateNameInputRealtime);
@@ -1642,7 +2257,15 @@
         institutionInput.addEventListener("blur", validateInstitutionInputRealtime);
       }
 
-      muatBankSoalDariSheet();
+      if (!tryRestoreExamSession()) {
+        muatBankSoalDariSheet();
+      } else {
+        const badge = document.getElementById("scriptConfigBadge");
+        if (badge && GOOGLE_SCRIPT_URL) {
+          badge.textContent = "Terhubung ke Google Sheets";
+          badge.className = "font-semibold text-emerald-700";
+        }
+      }
     });
   </script>
 </body>
