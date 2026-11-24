@@ -1,3 +1,10 @@
+function recordCurrentQuestionDuration() {
+  if (!isExamActive || !currentQuestionEnteredAt) return;
+  const elapsedSec = Math.max(0, Math.round((Date.now() - currentQuestionEnteredAt) / 1000));
+  questionDurations[currentIndex] = (questionDurations[currentIndex] || 0) + elapsedSec;
+  currentQuestionEnteredAt = Date.now();
+}
+
 function saveExamSessionToStorage() {
   if (!isExamActive) return;
   try {
@@ -12,7 +19,8 @@ function saveExamSessionToStorage() {
       currentFilter,
       questionBank,
       userAnswers,
-      doubtFlags
+      doubtFlags,
+      questionDurations
     };
     localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(snapshot));
   } catch (err) {
@@ -73,6 +81,9 @@ function tryRestoreExamSession() {
     doubtFlags = Array.isArray(snap.doubtFlags)
       ? snap.doubtFlags
       : new Array(questionBank.length).fill(false);
+    questionDurations = Array.isArray(snap.questionDurations)
+      ? snap.questionDurations
+      : new Array(questionBank.length).fill(0);
     currentIndex = Math.min(Math.max(Number(snap.currentIndex) || 0, 0), questionBank.length - 1);
     currentFilter = snap.currentFilter || "ALL";
 
@@ -97,6 +108,7 @@ function tryRestoreExamSession() {
 
     remainingSeconds = secsLeft;
     isExamActive = true;
+    currentQuestionEnteredAt = Date.now();
     enterExamWorkspaceUI();
     filterNav(currentFilter);
     renderQuestion();
@@ -117,7 +129,7 @@ function resetAndRestartFromSetup() {
   showScreen("setup");
 }
 
-function startExam() {
+function startExam(customWeakQuestions = null) {
   const nameVal = document.getElementById("participantNameInput").value.trim();
   const formationVal = document.getElementById("appliedFormationInput").value.trim();
   const institutionVal = document.getElementById("appliedInstitutionInput").value.trim();
@@ -189,6 +201,7 @@ function startExam() {
   appliedFormation = formationVal;
   appliedInstitution = institutionVal;
   examStartedAt = Date.now();
+  currentQuestionEnteredAt = Date.now();
   isExamActive = true;
 
   const durationMinutes = parseInt(document.getElementById("durationSelect").value, 10);
@@ -198,78 +211,85 @@ function startExam() {
   remainingSeconds = durationMinutes * 60;
   examEndTime = Date.now() + remainingSeconds * 1000;
 
-  const defaultBank = buildDefaultQuestionBank();
+  if (Array.isArray(customWeakQuestions) && customWeakQuestions.length > 0) {
+    const picked = orderMode === "shuffled" ? shuffleArray(customWeakQuestions) : [...customWeakQuestions];
+    questionBank = picked.map((item, idx) => ({ ...item, id: idx + 1 }));
+    examModeLabel = `${examModeLabel} • Ulangi Soal Salah & Ragu (${questionBank.length} Soal)`;
+  } else {
+    const defaultBank = buildDefaultQuestionBank();
 
-  function buildSubtestQuota(subtest, targetCount) {
-    const sheetItems = questionBank.filter(q => q.subtest === subtest);
-    const fallbackItems = defaultBank.filter(q => q.subtest === subtest);
+    function buildSubtestQuota(subtest, targetCount) {
+      const sheetItems = questionBank.filter(q => q.subtest === subtest);
+      const fallbackItems = defaultBank.filter(q => q.subtest === subtest);
 
-    const seenTexts = new Set();
-    const uniqueSheet = [];
-    for (const item of sheetItems) {
-      const key = String(item.question || "").trim().toLowerCase();
-      if (key && !seenTexts.has(key)) {
-        seenTexts.add(key);
-        uniqueSheet.push({ ...item });
-      }
-    }
-
-    let selected = orderMode === "shuffled" ? shuffleArray(uniqueSheet) : [...uniqueSheet];
-    if (selected.length > targetCount) {
-      selected = selected.slice(0, targetCount);
-    }
-
-    if (selected.length < targetCount) {
-      const extraPool = orderMode === "shuffled" ? shuffleArray(fallbackItems) : [...fallbackItems];
-      for (const fb of extraPool) {
-        if (selected.length >= targetCount) break;
-        const key = String(fb.question || "").trim().toLowerCase();
-        if (!seenTexts.has(key)) {
+      const seenTexts = new Set();
+      const uniqueSheet = [];
+      for (const item of sheetItems) {
+        const key = String(item.question || "").trim().toLowerCase();
+        if (key && !seenTexts.has(key)) {
           seenTexts.add(key);
-          selected.push({ ...fb });
+          uniqueSheet.push({ ...item });
         }
       }
-      let idx = 0;
-      while (selected.length < targetCount && extraPool.length > 0) {
-        selected.push({ ...extraPool[idx % extraPool.length] });
-        idx++;
+
+      let selected = orderMode === "shuffled" ? shuffleArray(uniqueSheet) : [...uniqueSheet];
+      if (selected.length > targetCount) {
+        selected = selected.slice(0, targetCount);
       }
+
+      if (selected.length < targetCount) {
+        const extraPool = orderMode === "shuffled" ? shuffleArray(fallbackItems) : [...fallbackItems];
+        for (const fb of extraPool) {
+          if (selected.length >= targetCount) break;
+          const key = String(fb.question || "").trim().toLowerCase();
+          if (!seenTexts.has(key)) {
+            seenTexts.add(key);
+            selected.push({ ...fb });
+          }
+        }
+        let idx = 0;
+        while (selected.length < targetCount && extraPool.length > 0) {
+          selected.push({ ...extraPool[idx % extraPool.length] });
+          idx++;
+        }
+      }
+
+      return orderMode === "shuffled" ? shuffleArray(selected) : selected;
     }
 
-    return orderMode === "shuffled" ? shuffleArray(selected) : selected;
-  }
+    if (focusMode === "TWK") {
+      questionBank = buildSubtestQuota("TWK", 30).map((item, idx) => ({
+        ...item,
+        id: idx + 1
+      }));
+      examModeLabel = `${examModeLabel} • Fokus TWK (30 Soal)`;
+    } else if (focusMode === "TIU") {
+      questionBank = buildSubtestQuota("TIU", 35).map((item, idx) => ({
+        ...item,
+        id: idx + 1
+      }));
+      examModeLabel = `${examModeLabel} • Fokus TIU (35 Soal)`;
+    } else if (focusMode === "TKP") {
+      questionBank = buildSubtestQuota("TKP", 45).map((item, idx) => ({
+        ...item,
+        id: idx + 1
+      }));
+      examModeLabel = `${examModeLabel} • Fokus TKP (45 Soal)`;
+    } else {
+      const twk = buildSubtestQuota("TWK", 30);
+      const tiu = buildSubtestQuota("TIU", 35);
+      const tkp = buildSubtestQuota("TKP", 45);
 
-  if (focusMode === "TWK") {
-    questionBank = buildSubtestQuota("TWK", 30).map((item, idx) => ({
-      ...item,
-      id: idx + 1
-    }));
-    examModeLabel = `${examModeLabel} • Fokus TWK (30 Soal)`;
-  } else if (focusMode === "TIU") {
-    questionBank = buildSubtestQuota("TIU", 35).map((item, idx) => ({
-      ...item,
-      id: idx + 1
-    }));
-    examModeLabel = `${examModeLabel} • Fokus TIU (35 Soal)`;
-  } else if (focusMode === "TKP") {
-    questionBank = buildSubtestQuota("TKP", 45).map((item, idx) => ({
-      ...item,
-      id: idx + 1
-    }));
-    examModeLabel = `${examModeLabel} • Fokus TKP (45 Soal)`;
-  } else {
-    const twk = buildSubtestQuota("TWK", 30);
-    const tiu = buildSubtestQuota("TIU", 35);
-    const tkp = buildSubtestQuota("TKP", 45);
-
-    questionBank = [...twk, ...tiu, ...tkp].map((item, idx) => ({
-      ...item,
-      id: idx + 1
-    }));
+      questionBank = [...twk, ...tiu, ...tkp].map((item, idx) => ({
+        ...item,
+        id: idx + 1
+      }));
+    }
   }
 
   userAnswers = new Array(questionBank.length).fill(null);
   doubtFlags = new Array(questionBank.length).fill(false);
+  questionDurations = new Array(questionBank.length).fill(0);
   currentIndex = 0;
   currentFilter = "ALL";
 
@@ -278,6 +298,54 @@ function startExam() {
   renderQuestion();
   renderGrid();
   startTimer();
+}
+
+function retryWrongAndDoubtQuestions() {
+  const sourceQ = reviewQuestions.length ? reviewQuestions : questionBank;
+  const sourceA = reviewAnswers.length ? reviewAnswers : userAnswers;
+  const history = getExamHistory();
+  const latestWithQuestions = history.find(h => Array.isArray(h.questions) && h.questions.length > 0);
+
+  const qList = sourceQ.length ? sourceQ : (latestWithQuestions ? latestWithQuestions.questions : []);
+  const aList = sourceA.length ? sourceA : (latestWithQuestions ? latestWithQuestions.answers : []);
+
+  if (!qList.length) {
+    alert("Belum ada sesi dengan rincian soal untuk diulangi.");
+    return;
+  }
+
+  const weakQuestions = [];
+  qList.forEach((q, idx) => {
+    const ans = aList[idx] ?? null;
+    const isDoubt = Boolean(doubtFlags[idx]);
+    if (q.subtest === "TKP") {
+      const pts = ans === null ? 0 : Number(q.scores?.[ans] ?? 0);
+      if (ans === null || pts < 5 || isDoubt) {
+        weakQuestions.push({ ...q });
+      }
+    } else {
+      if (ans === null || ans !== q.answer || isDoubt) {
+        weakQuestions.push({ ...q });
+      }
+    }
+  });
+
+  if (!weakQuestions.length) {
+    alert("Hebat! Semua soal pada sesi ini sudah terjawab dengan nilai maksimal tanpa ragu.");
+    return;
+  }
+
+  if (!document.getElementById("participantNameInput").value.trim() && participantName) {
+    document.getElementById("participantNameInput").value = participantName;
+  }
+  if (!document.getElementById("appliedFormationInput").value.trim() && appliedFormation) {
+    document.getElementById("appliedFormationInput").value = appliedFormation;
+  }
+  if (!document.getElementById("appliedInstitutionInput").value.trim() && appliedInstitution) {
+    document.getElementById("appliedInstitutionInput").value = appliedInstitution;
+  }
+
+  startExam(weakQuestions);
 }
 
 function startTimer() {
@@ -369,6 +437,7 @@ function renderQuestion() {
 function selectOption(optIdx) {
   const q = questionBank[currentIndex];
   if (!q || !Array.isArray(q.options) || optIdx < 0 || optIdx >= q.options.length) return;
+  recordCurrentQuestionDuration();
   userAnswers[currentIndex] = optIdx;
   saveExamSessionToStorage();
   renderQuestion();
@@ -376,6 +445,7 @@ function selectOption(optIdx) {
 }
 
 function toggleDoubt() {
+  recordCurrentQuestionDuration();
   doubtFlags[currentIndex] = !doubtFlags[currentIndex];
   saveExamSessionToStorage();
   renderGrid();
@@ -383,7 +453,9 @@ function toggleDoubt() {
 
 function prevQuestion() {
   if (currentIndex > 0) {
+    recordCurrentQuestionDuration();
     currentIndex--;
+    currentQuestionEnteredAt = Date.now();
     saveExamSessionToStorage();
     renderQuestion();
     renderGrid();
@@ -391,8 +463,10 @@ function prevQuestion() {
 }
 
 function saveAndNext() {
+  recordCurrentQuestionDuration();
   if (currentIndex < questionBank.length - 1) {
     currentIndex++;
+    currentQuestionEnteredAt = Date.now();
     saveExamSessionToStorage();
     renderQuestion();
     renderGrid();
@@ -423,7 +497,9 @@ function renderGrid() {
     btn.type = "button";
     btn.textContent = idx + 1;
     btn.onclick = () => {
+      recordCurrentQuestionDuration();
       currentIndex = idx;
+      currentQuestionEnteredAt = Date.now();
       saveExamSessionToStorage();
       renderQuestion();
       renderGrid();
@@ -539,7 +615,32 @@ function detectSuspiciousSubmission(payload) {
   return warnings;
 }
 
+function renderResultComparisonWithPrevious(currentSession) {
+  const compEl = document.getElementById("resultComparisonNote");
+  if (!compEl) return;
+
+  const userSessions = getFilteredUserSessions();
+  const prev = userSessions.find(s => s.id !== currentSession.id);
+  if (!prev) {
+    compEl.textContent = "Perbandingan Sesi: Ini sesi pertama yang tercatat untuk peserta ini.";
+    compEl.classList.remove("hidden");
+    return;
+  }
+
+  const diffTotal = Number(currentSession.total || 0) - Number(prev.total || 0);
+  const diffTwk = Number(currentSession.twk || 0) - Number(prev.twk || 0);
+  const diffTiu = Number(currentSession.tiu || 0) - Number(prev.tiu || 0);
+  const diffTkp = Number(currentSession.tkp || 0) - Number(prev.tkp || 0);
+
+  const fmtSign = (n) => (n > 0 ? `+${n}` : `${n}`);
+  compEl.textContent =
+    `vs. Sesi Sebelumnya (${prev.total}): Total ${fmtSign(diffTotal)} ` +
+    `(TWK ${fmtSign(diffTwk)} • TIU ${fmtSign(diffTiu)} • TKP ${fmtSign(diffTkp)})`;
+  compEl.classList.remove("hidden");
+}
+
 async function finishExam() {
+  recordCurrentQuestionDuration();
   clearInterval(timerInterval);
   isExamActive = false;
   clearExamSessionFromStorage();
@@ -645,7 +746,7 @@ async function finishExam() {
     if (alertBox) alertBox.classList.add("hidden");
   }
 
-  saveAttemptToHistory({
+  const newAttempt = {
     id: `att_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     nama: participantName,
     formasi: appliedFormation,
@@ -659,11 +760,17 @@ async function finishExam() {
     warning: warningText,
     waktuLabel: finishTimeLabel,
     questions: questionBank.map(q => ({ ...q })),
-    answers: [...userAnswers]
-  });
+    answers: [...userAnswers],
+    durations: [...questionDurations]
+  };
+
+  saveAttemptToHistory(newAttempt);
+  renderResultComparisonWithPrevious(newAttempt);
 
   reviewQuestions = questionBank.map(q => ({ ...q }));
   reviewAnswers = [...userAnswers];
+  reviewDurations = [...questionDurations];
+  reviewOnlyWeakMode = false;
   reviewMetaLabel = `Sesi Terbaru — ${participantName} (${finishTimeLabel})`;
   updateRestoreHistoryButtons();
   renderAttemptHistory();
@@ -752,6 +859,46 @@ function retrySendToSheet() {
   if (lastExamPayload && !isSubmittingScore) sendResultsToGoogleSheet(lastExamPayload);
 }
 
+function populateReviewCategoryFilter(sourceQuestions) {
+  const selectEl = document.getElementById("reviewCategoryFilter");
+  if (!selectEl) return;
+
+  const prevVal = selectEl.value || "ALL";
+  const cats = Array.from(
+    new Set(sourceQuestions.map(q => String(q.category || "Umum").trim()).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b, "id"));
+
+  selectEl.replaceChildren();
+  const allOpt = document.createElement("option");
+  allOpt.value = "ALL";
+  allOpt.textContent = "Semua Kategori";
+  selectEl.appendChild(allOpt);
+
+  cats.forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c;
+    opt.textContent = c;
+    selectEl.appendChild(opt);
+  });
+
+  selectEl.value = cats.includes(prevVal) ? prevVal : "ALL";
+}
+
+function updateWeakFilterButtonUI() {
+  const btn = document.getElementById("reviewOnlyWeakBtn");
+  if (!btn) return;
+  btn.className = reviewOnlyWeakMode
+    ? "px-3 py-1 text-xs font-bold rounded-lg bg-rose-600 text-white"
+    : "px-3 py-1 text-xs font-bold rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100";
+}
+
+function toggleReviewWeakOnly() {
+  reviewOnlyWeakMode = !reviewOnlyWeakMode;
+  updateWeakFilterButtonUI();
+  const activeSubtest = document.querySelector(".review-subtest-btn.active-subtest")?.dataset.subtest || "ALL";
+  renderReview(activeSubtest);
+}
+
 function toggleReviewSection() {
   const sec = document.getElementById("reviewSection");
   sec.classList.toggle("hidden");
@@ -759,49 +906,63 @@ function toggleReviewSection() {
     if (!reviewQuestions.length) {
       reviewQuestions = questionBank;
       reviewAnswers = userAnswers;
+      reviewDurations = questionDurations;
     }
     document.getElementById("reviewSectionTitle").textContent = "Pembahasan Lengkap Soal SKD";
     document.getElementById("reviewSessionSubtitle").textContent = reviewMetaLabel;
+    populateReviewCategoryFilter(reviewQuestions);
+    updateWeakFilterButtonUI();
     renderReview("ALL");
   }
 }
 
-function renderReviewSubtestStats(sourceQuestions, sourceAnswers) {
+function renderReviewSubtestStats(sourceQuestions, sourceAnswers, sourceDurations) {
   const statsEl = document.getElementById("reviewSubtestStats");
   if (!statsEl) return;
 
-  let twkTotal = 0, twkCorrect = 0;
-  let tiuTotal = 0, tiuCorrect = 0;
-  let tkpTotal = 0, tkpPoints = 0;
+  let twkTotal = 0, twkCorrect = 0, twkSec = 0;
+  let tiuTotal = 0, tiuCorrect = 0, tiuSec = 0;
+  let tkpTotal = 0, tkpPoints = 0, tkpSec = 0;
 
   sourceQuestions.forEach((q, idx) => {
     const ans = sourceAnswers[idx] ?? null;
+    const sec = Number(sourceDurations[idx] || 0);
     if (q.subtest === "TWK") {
       twkTotal++;
+      twkSec += sec;
       if (ans !== null && ans === q.answer) twkCorrect++;
     } else if (q.subtest === "TIU") {
       tiuTotal++;
+      tiuSec += sec;
       if (ans !== null && ans === q.answer) tiuCorrect++;
     } else if (q.subtest === "TKP") {
       tkpTotal++;
+      tkpSec += sec;
       if (ans !== null && Array.isArray(q.scores)) {
         tkpPoints += Number(q.scores[ans] || 0);
       }
     }
   });
 
+  const avgTwk = twkTotal > 0 ? Math.round(twkSec / twkTotal) : 0;
+  const avgTiu = tiuTotal > 0 ? Math.round(tiuSec / tiuTotal) : 0;
+  const avgTkp = tkpTotal > 0 ? Math.round(tkpSec / tkpTotal) : 0;
+
   statsEl.innerHTML = `
     <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
       <div class="font-bold text-slate-700">TWK</div>
       <div class="text-sm font-extrabold text-blue-700 mt-0.5">${twkCorrect} / ${twkTotal} Benar (${twkCorrect * 5} Poin)</div>
+      <div class="text-[11px] text-slate-500 mt-0.5">Rata-rata waktu: ${avgTwk} dtk/soal</div>
     </div>
     <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
       <div class="font-bold text-slate-700">TIU</div>
       <div class="text-sm font-extrabold text-blue-700 mt-0.5">${tiuCorrect} / ${tiuTotal} Benar (${tiuCorrect * 5} Poin)</div>
+      <div class="text-[11px] text-slate-500 mt-0.5">Rata-rata waktu: ${avgTiu} dtk/soal</div>
     </div>
     <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
       <div class="font-bold text-slate-700">TKP (${tkpTotal} Soal)</div>
       <div class="text-sm font-extrabold text-emerald-700 mt-0.5">Total ${tkpPoints} Poin</div>
+      <div class="text-[11px] text-slate-500 mt-0.5">Rata-rata waktu: ${avgTkp} dtk/soal</div>
     </div>
   `;
 }
@@ -844,27 +1005,52 @@ function renderReviewCategoryStats(sourceQuestions, sourceAnswers) {
   });
 }
 
+function isWeakReviewItem(q, userAns) {
+  if (q.subtest === "TKP") {
+    const pts = userAns === null ? 0 : Number(q.scores?.[userAns] ?? 0);
+    return userAns === null || pts < 5;
+  }
+  return userAns === null || userAns !== q.answer;
+}
+
 function renderReview(filterSubtest) {
+  document.querySelectorAll(".review-subtest-btn").forEach(btn => {
+    const isMatch = btn.dataset.subtest === filterSubtest;
+    btn.classList.toggle("active-subtest", isMatch);
+    btn.className = `review-subtest-btn px-3 py-1 text-xs font-bold rounded-lg ${
+      isMatch ? "bg-slate-800 text-white active-subtest" : "bg-slate-100 text-slate-700"
+    }`;
+  });
+
+  const selectedCat = document.getElementById("reviewCategoryFilter")?.value || "ALL";
   const list = document.getElementById("reviewList");
   const letters = ["A", "B", "C", "D", "E"];
   const sourceQuestions = reviewQuestions.length ? reviewQuestions : questionBank;
   const sourceAnswers = reviewAnswers.length ? reviewAnswers : userAnswers;
+  const sourceDurations = reviewDurations.length ? reviewDurations : questionDurations;
 
-  renderReviewSubtestStats(sourceQuestions, sourceAnswers);
+  renderReviewSubtestStats(sourceQuestions, sourceAnswers, sourceDurations);
   renderReviewCategoryStats(sourceQuestions, sourceAnswers);
   list.replaceChildren();
 
   sourceQuestions.forEach((q, idx) => {
     if (filterSubtest !== "ALL" && q.subtest !== filterSubtest) return;
+    if (selectedCat !== "ALL" && (q.category || "Umum") !== selectedCat) return;
 
     const userAns = sourceAnswers[idx] ?? null;
+    if (reviewOnlyWeakMode && !isWeakReviewItem(q, userAns)) return;
+
+    const durSec = Number(sourceDurations[idx] || 0);
     const card = document.createElement("div");
     card.className =
       "p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2";
 
     const heading = document.createElement("div");
-    heading.className = "text-xs font-bold text-blue-700";
-    heading.textContent = `No. ${idx + 1} • ${q.subtest} (${q.category})`;
+    heading.className = "text-xs font-bold text-blue-700 flex flex-wrap items-center justify-between gap-2";
+    heading.innerHTML = `
+      <span>No. ${idx + 1} • ${escapeHtml(q.subtest)} (${escapeHtml(q.category)})</span>
+      <span class="text-[11px] font-semibold text-slate-500">Durasi: ${durSec} dtk</span>
+    `;
 
     const answer = document.createElement("p");
     answer.className = "text-xs";
@@ -904,6 +1090,7 @@ function renderReview(filterSubtest) {
 
 window.addEventListener("beforeunload", (e) => {
   if (isExamActive) {
+    recordCurrentQuestionDuration();
     saveExamSessionToStorage();
     e.preventDefault();
     e.returnValue = "Ujian simulasi CAT sedang berlangsung. Progres otomatis tersimpan jika halaman di-refresh.";
