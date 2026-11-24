@@ -728,3 +728,66 @@ function renderDashboardTable() {
     tbody.appendChild(tr);
   });
 }
+function openDonationModal() {
+  if (typeof isExamActive !== "undefined" && isExamActive) {
+    alert("Selesaikan atau keluar dari sesi ujian aktif terlebih dahulu sebelum membuka menu donasi.");
+    return;
+  }
+  const modal = document.getElementById("donationModal");
+  if (modal) {
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+  }
+}
+
+function closeDonationModal() {
+  const modal = document.getElementById("donationModal");
+  if (modal) {
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+  }
+}
+
+function selectDonationPreset(amountLabel) {
+  const inputEl = document.getElementById("donationAmountInput");
+  if (inputEl) {
+    inputEl.value = amountLabel;
+  }
+  document.querySelectorAll(".donation-preset-btn").forEach(btn => {
+    const isMatch = btn.dataset.amount === amountLabel;
+    btn.className = isMatch
+      ? "donation-preset-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-600 text-white"
+      : "donation-preset-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100";
+  });
+}
+
+async function copyDonationText(textToCopy, feedbackId) {
+  const fb = document.getElementById(feedbackId);
+  try {
+    await navigator.clipboard.writeText(textToCopy);
+  } catch (err) {
+    const tempInput = document.createElement("input");
+    tempInput.value = textToCopy;
+    document.body.appendChild(tempInput);
+    tempInput.select();
+    document.execCommand("copy");
+    document.body.removeChild(tempInput);
+  }
+  if (fb) {
+    fb.textContent = `Tersalin: ${textToCopy}`;
+    fb.classList.remove("hidden");
+    setTimeout(() => fb.classList.add("hidden"), 2500);
+  }
+}
+
+function confirmDonationNote() {
+  const amountVal = (document.getElementById("donationAmountInput")?.value || "Seikhlasnya").trim();
+  const senderVal = (document.getElementById("donationSenderInput")?.value || "Peserta").trim();
+  const noteEl = document.getElementById("donationThankYouNote");
+  if (noteEl) {
+    noteEl.textContent =
+      `Terima kasih ${senderVal || "Peserta"} atas dukungan donasi (${amountVal || "Seikhlasnya"}) untuk pengembangan Simulasi CAT SKD CPNS oleh Best D Pamungkas.`;
+    noteEl.classList.remove("hidden");
+  }
+}
+
