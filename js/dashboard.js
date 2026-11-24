@@ -1,3 +1,16 @@
+function formatShortDate(raw) {
+  if (!raw) return "-";
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) return String(raw);
+  return d.toLocaleString("id-ID", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
 function getActiveUserFilterName() {
   if (loggedUser && loggedUser.nama) return loggedUser.nama.trim();
   const inputVal = (document.getElementById("participantNameInput")?.value || "").trim();
@@ -310,7 +323,7 @@ function renderDashboardTable() {
       <td class="py-2.5 px-3 text-center">
         <span class="text-xs font-bold px-2 py-0.5 rounded ${badgeClass}">${escapeHtml(rec.status_pg)}</span>
       </td>
-      <td class="py-2.5 px-3 text-xs text-slate-500">${escapeHtml(rec.waktu)}</td>
+      <td class="py-2.5 px-3 text-xs text-slate-500 whitespace-nowrap">${escapeHtml(formatShortDate(rec.waktu))}</td>
     `;
     tbody.appendChild(tr);
   });
