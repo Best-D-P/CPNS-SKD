@@ -78,6 +78,7 @@ function showScreen(screenName) {
   if (screenName === "dashboard") {
     refreshDashboardData();
   } else if (screenName === "result") {
+    updateRestoreHistoryButtons();
     renderAttemptHistory();
   }
 }
