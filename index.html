@@ -466,9 +466,12 @@
               <h3 class="text-sm font-extrabold text-slate-800">Riwayat Ujian Sebelum & Sesudah (Klik untuk Review)</h3>
               <p class="text-[11px] text-slate-500">Bandingkan perkembangan skor dan buka pembahasan tiap sesi ujian.</p>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2.5">
               <button type="button" onclick="exportLocalHistoryToCsv()" class="text-xs font-bold text-blue-700 hover:underline">
                 Unduh Riwayat (CSV)
+              </button>
+              <button type="button" onclick="restoreClearedExamHistory()" class="restore-history-btn hidden text-xs font-bold text-emerald-700 hover:underline">
+                Pulihkan Riwayat
               </button>
               <button type="button" onclick="clearLocalExamHistory()" class="text-xs font-bold text-rose-700 hover:underline">
                 Hapus Riwayat Lokal
@@ -554,7 +557,10 @@
               <h3 id="dashUserHistoryTitle" class="text-sm font-extrabold text-slate-800">Ujian Sebelumnya (User Aktif)</h3>
               <p class="text-[11px] text-slate-500">Klik Review untuk membuka pembahasan sesi sebelumnya.</p>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <button type="button" onclick="restoreClearedExamHistory()" class="restore-history-btn hidden text-[11px] font-bold text-emerald-700 hover:underline">
+                Pulihkan Riwayat
+              </button>
               <button type="button" onclick="clearLocalExamHistory()" class="text-[11px] font-bold text-rose-700 hover:underline">
                 Hapus Riwayat Lokal
               </button>
@@ -650,10 +656,10 @@
     Simulasi CAT SKD CPNS BKN • Dibuat oleh <strong class="text-slate-700">Best D Pamungkas</strong>
   </footer>
 
-  <script src="js/config.js?v=2"></script>
-  <script src="js/questions.js?v=2"></script>
-  <script src="js/auth.js?v=2"></script>
-  <script src="js/dashboard.js?v=2"></script>
-  <script src="js/exam.js?v=2"></script>
+  <script src="js/config.js?v=3"></script>
+  <script src="js/questions.js?v=3"></script>
+  <script src="js/auth.js?v=3"></script>
+  <script src="js/dashboard.js?v=3"></script>
+  <script src="js/exam.js?v=3"></script>
 </body>
 </html>
