@@ -33,6 +33,15 @@ function saveAttemptToHistory(attemptRecord) {
   localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history.slice(0, 150)));
 }
 
+function clearLocalExamHistory() {
+  if (!confirm("Hapus seluruh riwayat ujian lokal yang tersimpan di browser ini?")) return;
+  localStorage.removeItem(HISTORY_STORAGE_KEY);
+  renderAttemptHistory();
+  renderDashboardUserPreviousExams();
+  renderUserScoreTrendChart();
+  refreshDashboardData();
+}
+
 function getFilteredUserSessions() {
   const allHistory = getExamHistory();
   const activeName = getActiveUserFilterName();
@@ -132,10 +141,25 @@ function renderDashboardUserPreviousExams() {
 function renderUserScoreTrendChart() {
   const chartBox = document.getElementById("userScoreTrendChart");
   const badgeEl = document.getElementById("trendChartBadge");
+  const pgSummaryEl = document.getElementById("trendPgSummary");
   if (!chartBox || !badgeEl) return;
 
   const sessionsChronological = getFilteredUserSessions().slice().reverse();
   badgeEl.textContent = `${sessionsChronological.length} Sesi`;
+
+  if (pgSummaryEl) {
+    if (sessionsChronological.length === 0) {
+      pgSummaryEl.textContent = "PG Acuan: TWK ≥ 65 • TIU ≥ 80 • TKP ≥ 166 (Total ≥ 311)";
+    } else {
+      const avgTwk = Math.round(sessionsChronological.reduce((a, b) => a + Number(b.twk || 0), 0) / sessionsChronological.length);
+      const avgTiu = Math.round(sessionsChronological.reduce((a, b) => a + Number(b.tiu || 0), 0) / sessionsChronological.length);
+      const avgTkp = Math.round(sessionsChronological.reduce((a, b) => a + Number(b.tkp || 0), 0) / sessionsChronological.length);
+      pgSummaryEl.textContent =
+        `Rata-rata Anda — TWK: ${avgTwk}/65 (${avgTwk >= 65 ? "Aman" : "Kurang"}) • ` +
+        `TIU: ${avgTiu}/80 (${avgTiu >= 80 ? "Aman" : "Kurang"}) • ` +
+        `TKP: ${avgTkp}/166 (${avgTkp >= 166 ? "Aman" : "Kurang"})`;
+    }
+  }
 
   if (sessionsChronological.length < 2) {
     chartBox.innerHTML = `
@@ -153,6 +177,8 @@ function renderUserScoreTrendChart() {
   const padX = 32;
   const padY = 18;
   const maxVal = 550;
+  const totalPgThreshold = 311;
+  const pgY = height - padY - (totalPgThreshold / maxVal) * (height - padY * 2);
 
   const pts = sessionsChronological.map((s, idx) => {
     const x = padX + (idx / (sessionsChronological.length - 1)) * (width - padX * 2);
@@ -171,11 +197,45 @@ function renderUserScoreTrendChart() {
   chartBox.innerHTML = `
     <svg viewBox="0 0 ${width} ${height}" class="w-full h-32">
       <line x1="${padX}" y1="${height - padY}" x2="${width - padX}" y2="${height - padY}" stroke="#cbd5e1" stroke-width="1" />
-      <line x1="${padX}" y1="${padY}" x2="${width - padX}" y2="${padY}" stroke="#e2e8f0" stroke-dasharray="3" stroke-width="1" />
+      <line x1="${padX}" y1="${pgY.toFixed(1)}" x2="${width - padX}" y2="${pgY.toFixed(1)}" stroke="#10b981" stroke-dasharray="4" stroke-width="1" />
+      <text x="${width - padX}" y="${(pgY - 3).toFixed(1)}" text-anchor="end" font-size="8" font-weight="bold" fill="#059669">PG ≥ 311</text>
       <polyline fill="none" stroke="#2563eb" stroke-width="2.5" points="${polylineStr}" />
       ${circlesHtml}
     </svg>
   `;
+}
+
+function populateDashboardInstitutionFilter() {
+  const selectEl = document.getElementById("dashboardFilterInstansi");
+  if (!selectEl) return;
+
+  const previousValue = selectEl.value || "ALL";
+  const institutions = Array.from(
+    new Set(
+      dashboardRecords
+        .map(r => String(r.instansi || "").trim())
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b, "id"));
+
+  selectEl.replaceChildren();
+  const allOpt = document.createElement("option");
+  allOpt.value = "ALL";
+  allOpt.textContent = "Semua Instansi";
+  selectEl.appendChild(allOpt);
+
+  institutions.forEach(inst => {
+    const opt = document.createElement("option");
+    opt.value = inst;
+    opt.textContent = inst;
+    selectEl.appendChild(opt);
+  });
+
+  if (institutions.includes(previousValue)) {
+    selectEl.value = previousValue;
+  } else {
+    selectEl.value = "ALL";
+  }
 }
 
 function setDashboardScope(scope) {
@@ -230,6 +290,7 @@ async function refreshDashboardData() {
   if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("TEMPEL_URL")) {
     dashboardRecords = localRecords;
     infoEl.textContent = `Menampilkan ${dashboardRecords.length} data lokal (browser ini).`;
+    populateDashboardInstitutionFilter();
     renderDashboardTable();
     return;
   }
@@ -249,24 +310,28 @@ async function refreshDashboardData() {
     infoEl.textContent = `Mode offline/lokal (${dashboardRecords.length} data tersimpan di browser).`;
   }
 
+  populateDashboardInstitutionFilter();
   renderDashboardTable();
 }
 
 function renderDashboardTable() {
   const qText = (document.getElementById("dashboardSearchInput")?.value || "").trim().toLowerCase();
   const pgFilter = document.getElementById("dashboardFilterPg")?.value || "ALL";
+  const instFilter = document.getElementById("dashboardFilterInstansi")?.value || "ALL";
   const activeName = getActiveUserFilterName();
+  const activeKey = activeName ? normalizeAccountKey(activeName) : "";
 
   const filtered = dashboardRecords.filter(rec => {
     if (dashboardScope === "MINE") {
-      if (!activeName || normalizeAccountKey(rec.nama) !== normalizeAccountKey(activeName)) {
+      if (!activeKey || normalizeAccountKey(rec.nama) !== activeKey) {
         return false;
       }
     }
     const matchPg = pgFilter === "ALL" || rec.status_pg === pgFilter;
+    const matchInst = instFilter === "ALL" || String(rec.instansi || "").trim() === instFilter;
     const hay = `${rec.nama} ${rec.formasi} ${rec.instansi}`.toLowerCase();
     const matchText = !qText || hay.includes(qText);
-    return matchPg && matchText;
+    return matchPg && matchInst && matchText;
   });
 
   const sortedRows = filtered
@@ -301,7 +366,9 @@ function renderDashboardTable() {
 
   rowsToDisplay.forEach((rec, i) => {
     const tr = document.createElement("tr");
-    tr.className = "hover:bg-slate-50";
+    const isCurrentUserRow = activeKey && normalizeAccountKey(rec.nama) === activeKey;
+    tr.className = isCurrentUserRow ? "bg-blue-50/60 hover:bg-blue-50" : "hover:bg-slate-50";
+
     const isPass = rec.status_pg === "LULUS PG";
     const badgeClass = isPass
       ? "bg-emerald-100 text-emerald-800"
@@ -310,10 +377,13 @@ function renderDashboardTable() {
     const rankBadge = rankNum <= 3
       ? `<span class="ml-1 inline-block text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">Top #${rankNum}</span>`
       : "";
+    const youBadge = isCurrentUserRow
+      ? `<span class="ml-1 inline-block text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">Anda</span>`
+      : "";
 
     tr.innerHTML = `
       <td class="py-2.5 px-3 font-semibold text-slate-500">${rankNum}</td>
-      <td class="py-2.5 px-3 font-bold text-slate-800">${escapeHtml(rec.nama)}${rankBadge}</td>
+      <td class="py-2.5 px-3 font-bold text-slate-800">${escapeHtml(rec.nama)}${rankBadge}${youBadge}</td>
       <td class="py-2.5 px-3 font-medium text-slate-800">${escapeHtml(rec.formasi)}</td>
       <td class="py-2.5 px-3 text-slate-600">${escapeHtml(rec.instansi)}</td>
       <td class="py-2.5 px-3 text-center font-semibold">${rec.twk}</td>
