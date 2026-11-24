@@ -39,7 +39,7 @@
        ===================================================================== -->
   <script>
     const GOOGLE_SCRIPT_URL =
-      "https://script.google.com/macros/s/AKfycby9ugC5r_52hB3j9kBapu6-vSyQWHmCOims4gXjhqsMjPN2S7m8wRLWTFRpvJcuwoL8/exec";
+      "https://script.google.com/macros/s/AKfycbyBj65VLsxCRLJo5yLV4JNHPmlcq6LX9Y9R3lak-O0eRXqyd6vXcZZiB8K8XJDdaIq43A/exec";
   </script>
 
   <!-- HEADER UTAMA -->
@@ -723,35 +723,52 @@
     });
 
     // =========================================================================
-    // SANITASI SVG AMAN (MENCEGAH XSS)
+    // SANITASI MEDIA SOAL (<svg> BAWAAN & <img> GOOGLE DRIVE)
     // =========================================================================
-    function sanitizeSvgMarkup(rawSvg) {
-      if (typeof rawSvg !== "string" || !rawSvg.trim()) return "";
+    function sanitizeQuestionMedia(rawMarkup) {
+      if (typeof rawMarkup !== "string" || !rawMarkup.trim()) return "";
       const parser = new DOMParser();
-      const doc = parser.parseFromString(rawSvg, "image/svg+xml");
-      const svgEl = doc.querySelector("svg");
-      if (!svgEl) return "";
+      const doc = parser.parseFromString(rawMarkup, "text/html");
 
-      const forbiddenTags = ["script", "iframe", "object", "embed", "foreignobject", "link", "meta"];
-      forbiddenTags.forEach((tag) => {
-        svgEl.querySelectorAll(tag).forEach((el) => el.remove());
-      });
-
-      const allElements = [svgEl, ...svgEl.querySelectorAll("*")];
-      allElements.forEach((el) => {
-        Array.from(el.attributes).forEach((attr) => {
-          const attrName = attr.name.toLowerCase();
-          const attrVal = String(attr.value || "").trim().toLowerCase();
-          if (
-            attrName.startsWith("on") ||
-            (attrName === "href" || attrName === "xlink:href") && attrVal.startsWith("javascript:")
-          ) {
-            el.removeAttribute(attr.name);
-          }
+      const svgEl = doc.body.querySelector("svg");
+      if (svgEl) {
+        const forbiddenTags = ["script", "iframe", "object", "embed", "foreignobject", "link", "meta"];
+        forbiddenTags.forEach((tag) => {
+          svgEl.querySelectorAll(tag).forEach((el) => el.remove());
         });
-      });
 
-      return svgEl.outerHTML;
+        [svgEl, ...svgEl.querySelectorAll("*")].forEach((el) => {
+          Array.from(el.attributes).forEach((attr) => {
+            const attrName = attr.name.toLowerCase();
+            const attrVal = String(attr.value || "").trim().toLowerCase();
+            if (
+              attrName.startsWith("on") ||
+              ((attrName === "href" || attrName === "xlink:href") && attrVal.startsWith("javascript:"))
+            ) {
+              el.removeAttribute(attr.name);
+            }
+          });
+        });
+
+        return svgEl.outerHTML;
+      }
+
+      const imgEl = doc.body.querySelector("img");
+      if (imgEl) {
+        const src = String(imgEl.getAttribute("src") || "").trim();
+        const isAllowedUrl =
+          src.startsWith("https://drive.google.com/thumbnail") ||
+          src.startsWith("https://lh3.googleusercontent.com/");
+        if (!isAllowedUrl) return "";
+
+        const cleanImg = document.createElement("img");
+        cleanImg.src = src;
+        cleanImg.alt = imgEl.getAttribute("alt") || "Gambar Soal";
+        cleanImg.className = "max-h-56 mx-auto rounded-lg border border-slate-200";
+        return cleanImg.outerHTML;
+      }
+
+      return "";
     }
 
     function updateQuestionStatsUI(sourceLabel) {
@@ -1108,9 +1125,9 @@
       document.getElementById("questionText").textContent = q.question;
 
       const mediaBox = document.getElementById("questionMedia");
-      const safeSvg = sanitizeSvgMarkup(q.svg);
-      if (safeSvg) {
-        mediaBox.innerHTML = safeSvg;
+      const safeMedia = sanitizeQuestionMedia(q.svg);
+      if (safeMedia) {
+        mediaBox.innerHTML = safeMedia;
         mediaBox.classList.remove("hidden");
       } else {
         mediaBox.replaceChildren();
