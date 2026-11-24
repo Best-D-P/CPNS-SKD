@@ -102,116 +102,130 @@
 
       <!-- Panel Akun: Daftar / Login / Reset Password via Email -->
       <div id="authCard" class="p-6 sm:p-8 border-b border-slate-200 bg-slate-50/70">
-        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <!-- Ringkasan Setelah Login (Form Input Akun Disembunyikan) -->
+        <div id="loggedInAccountBanner" class="hidden bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 class="text-base font-extrabold text-slate-800">Akun Peserta Unik (Reset via Email)</h3>
-            <p class="text-xs text-slate-500">Daftar dengan email aktif agar kode reset password dapat dikirim langsung ke email Anda.</p>
+            <div class="text-xs font-extrabold text-emerald-900">Anda Sudah Login</div>
+            <div id="loggedInAccountDetail" class="text-xs text-emerald-800 mt-0.5"></div>
           </div>
-          <div class="flex items-center gap-2">
-            <span id="activeSessionBadge" class="hidden text-xs font-bold bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full"></span>
-            <div class="inline-flex rounded-xl bg-slate-200 p-1 text-xs font-bold">
-              <button type="button" id="tabLoginBtn" onclick="switchAuthMode('login')" class="px-3 py-1.5 rounded-lg bg-white text-slate-900 shadow-sm">
-                Login
-              </button>
-              <button type="button" id="tabRegisterBtn" onclick="switchAuthMode('register')" class="px-3 py-1.5 rounded-lg text-slate-700">
-                Daftar Akun
-              </button>
-              <button type="button" id="tabResetBtn" onclick="switchAuthMode('reset')" class="px-3 py-1.5 rounded-lg text-slate-700">
-                Reset Password
-              </button>
+          <button type="button" onclick="logoutParticipant()" class="bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold px-3.5 py-2 rounded-lg transition">
+            Ganti Akun / Keluar
+          </button>
+        </div>
+
+        <!-- Form Input Akun (Tampil Saat Belum Login) -->
+        <div id="authFormsContainer">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div>
+              <h3 class="text-base font-extrabold text-slate-800">Akun Peserta Unik (Reset via Email)</h3>
+              <p class="text-xs text-slate-500">Daftar dengan email aktif agar kode reset password dapat dikirim langsung ke email Anda.</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <span id="activeSessionBadge" class="hidden text-xs font-bold bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full"></span>
+              <div class="inline-flex rounded-xl bg-slate-200 p-1 text-xs font-bold">
+                <button type="button" id="tabLoginBtn" onclick="switchAuthMode('login')" class="px-3 py-1.5 rounded-lg bg-white text-slate-900 shadow-sm">
+                  Login
+                </button>
+                <button type="button" id="tabRegisterBtn" onclick="switchAuthMode('register')" class="px-3 py-1.5 rounded-lg text-slate-700">
+                  Daftar Akun
+                </button>
+                <button type="button" id="tabResetBtn" onclick="switchAuthMode('reset')" class="px-3 py-1.5 rounded-lg text-slate-700">
+                  Reset Password
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Form Login -->
-        <div id="loginModePanel" class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
-          <div>
-            <label for="loginUsernameInput" class="block text-xs font-bold text-slate-700 mb-1.5">
-              Nama Akun atau Email <span class="text-rose-600">*</span>
-            </label>
-            <input type="text" id="loginUsernameInput" placeholder="Nama akun atau email terdaftar..."
-              class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" />
-          </div>
-          <div>
-            <label for="loginPasswordInput" class="block text-xs font-bold text-slate-700 mb-1.5">
-              Password <span class="text-rose-600">*</span>
-            </label>
-            <input type="password" id="loginPasswordInput" placeholder="Masukkan password..."
-              class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" />
-          </div>
-          <div>
-            <button type="button" onclick="handleLoginSubmit()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition">
-              Masuk ke Akun
-            </button>
-          </div>
-        </div>
-
-        <!-- Form Daftar Akun Baru -->
-        <div id="registerModePanel" class="hidden grid-cols-1 sm:grid-cols-4 gap-4 items-end">
-          <div>
-            <label for="regUsernameInput" class="block text-xs font-bold text-slate-700 mb-1.5">
-              Nama Akun Unik <span class="text-rose-600">*</span>
-            </label>
-            <input type="text" id="regUsernameInput" placeholder="Contoh: Best D Pamungkas"
-              class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" />
-          </div>
-          <div>
-            <label for="regEmailInput" class="block text-xs font-bold text-slate-700 mb-1.5">
-              Email Aktif <span class="text-rose-600">*</span>
-            </label>
-            <input type="email" id="regEmailInput" placeholder="nama@email.com"
-              class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" />
-          </div>
-          <div>
-            <label for="regPasswordInput" class="block text-xs font-bold text-slate-700 mb-1.5">
-              Password (Min. 4) <span class="text-rose-600">*</span>
-            </label>
-            <input type="password" id="regPasswordInput" placeholder="Minimal 4 karakter"
-              class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" />
-          </div>
-          <div>
-            <button type="button" onclick="handleRegisterSubmit()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition">
-              Daftar Akun Baru
-            </button>
-          </div>
-        </div>
-
-        <!-- Form Reset Password via Email -->
-        <div id="resetModePanel" class="hidden space-y-3">
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
-            <div class="sm:col-span-2">
-              <label for="resetEmailInput" class="block text-xs font-bold text-slate-700 mb-1.5">
-                Email Terdaftar <span class="text-rose-600">*</span>
+          <!-- Form Login -->
+          <div id="loginModePanel" class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+            <div>
+              <label for="loginUsernameInput" class="block text-xs font-bold text-slate-700 mb-1.5">
+                Nama Akun atau Email <span class="text-rose-600">*</span>
               </label>
-              <input type="email" id="resetEmailInput" placeholder="Masukkan email saat pendaftaran..."
+              <input type="text" id="loginUsernameInput" placeholder="Nama akun atau email terdaftar..."
                 class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" />
             </div>
             <div>
-              <button type="button" id="sendResetOtpBtn" onclick="handleRequestResetOtp()" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition">
-                Kirim Kode ke Email
+              <label for="loginPasswordInput" class="block text-xs font-bold text-slate-700 mb-1.5">
+                Password <span class="text-rose-600">*</span>
+              </label>
+              <input type="password" id="loginPasswordInput" placeholder="Masukkan password..."
+                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" />
+            </div>
+            <div>
+              <button type="button" onclick="handleLoginSubmit()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition">
+                Masuk ke Akun
               </button>
             </div>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end pt-2 border-t border-slate-200">
+          <!-- Form Daftar Akun Baru -->
+          <div id="registerModePanel" class="hidden grid-cols-1 sm:grid-cols-4 gap-4 items-end">
             <div>
-              <label for="resetOtpInput" class="block text-xs font-bold text-slate-700 mb-1.5">
-                Kode 6 Digit dari Email <span class="text-rose-600">*</span>
+              <label for="regUsernameInput" class="block text-xs font-bold text-slate-700 mb-1.5">
+                Nama Akun Unik <span class="text-rose-600">*</span>
               </label>
-              <input type="text" id="resetOtpInput" maxlength="6" placeholder="Contoh: 482910"
+              <input type="text" id="regUsernameInput" placeholder="Contoh: Best D Pamungkas"
                 class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" />
             </div>
             <div>
-              <label for="resetNewPasswordInput" class="block text-xs font-bold text-slate-700 mb-1.5">
-                Password Baru (Min. 4) <span class="text-rose-600">*</span>
+              <label for="regEmailInput" class="block text-xs font-bold text-slate-700 mb-1.5">
+                Email Aktif <span class="text-rose-600">*</span>
               </label>
-              <input type="password" id="resetNewPasswordInput" placeholder="Password pengganti"
+              <input type="email" id="regEmailInput" placeholder="nama@email.com"
                 class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" />
             </div>
             <div>
-              <button type="button" onclick="handleConfirmResetOtp()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition">
-                Verifikasi & Ubah Password
+              <label for="regPasswordInput" class="block text-xs font-bold text-slate-700 mb-1.5">
+                Password (Min. 4) <span class="text-rose-600">*</span>
+              </label>
+              <input type="password" id="regPasswordInput" placeholder="Minimal 4 karakter"
+                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" />
+            </div>
+            <div>
+              <button type="button" onclick="handleRegisterSubmit()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition">
+                Daftar Akun Baru
               </button>
+            </div>
+          </div>
+
+          <!-- Form Reset Password via Email -->
+          <div id="resetModePanel" class="hidden space-y-3">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+              <div class="sm:col-span-2">
+                <label for="resetEmailInput" class="block text-xs font-bold text-slate-700 mb-1.5">
+                  Email Terdaftar <span class="text-rose-600">*</span>
+                </label>
+                <input type="email" id="resetEmailInput" placeholder="Masukkan email saat pendaftaran..."
+                  class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" />
+              </div>
+              <div>
+                <button type="button" id="sendResetOtpBtn" onclick="handleRequestResetOtp()" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition">
+                  Kirim Kode ke Email
+                </button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end pt-2 border-t border-slate-200">
+              <div>
+                <label for="resetOtpInput" class="block text-xs font-bold text-slate-700 mb-1.5">
+                  Kode 6 Digit dari Email <span class="text-rose-600">*</span>
+                </label>
+                <input type="text" id="resetOtpInput" maxlength="6" placeholder="Contoh: 482910"
+                  class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" />
+              </div>
+              <div>
+                <label for="resetNewPasswordInput" class="block text-xs font-bold text-slate-700 mb-1.5">
+                  Password Baru (Min. 4) <span class="text-rose-600">*</span>
+                </label>
+                <input type="password" id="resetNewPasswordInput" placeholder="Password pengganti"
+                  class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" />
+              </div>
+              <div>
+                <button type="button" onclick="handleConfirmResetOtp()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition">
+                  Verifikasi & Ubah Password
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1107,6 +1121,7 @@
 
       applyLoggedUserToUI();
       renderAttemptHistory();
+      renderDashboardUserPreviousExams();
       showAuthFeedback(`Akun "${rawName}" (${emailVal}) berhasil didaftarkan.`);
     }
 
@@ -1135,6 +1150,7 @@
           document.getElementById("loginPasswordInput").value = "";
           applyLoggedUserToUI();
           renderAttemptHistory();
+          renderDashboardUserPreviousExams();
           showAuthFeedback(`Selamat datang kembali, ${resolvedName}.`);
           return;
         }
@@ -1162,6 +1178,7 @@
       document.getElementById("loginPasswordInput").value = "";
       applyLoggedUserToUI();
       renderAttemptHistory();
+      renderDashboardUserPreviousExams();
       showAuthFeedback(`Selamat datang kembali, ${found.nama} (Mode Lokal).`);
     }
 
@@ -1283,20 +1300,35 @@
     function applyLoggedUserToUI() {
       const badge = document.getElementById("activeSessionBadge");
       const logoutBtn = document.getElementById("logoutBtn");
+      const formsBox = document.getElementById("authFormsContainer");
+      const bannerBox = document.getElementById("loggedInAccountBanner");
+      const detailEl = document.getElementById("loggedInAccountDetail");
       const nameInput = document.getElementById("participantNameInput");
       const loginName = document.getElementById("loginUsernameInput");
 
       if (loggedUser && loggedUser.nama) {
-        badge.textContent = `Akun Aktif: ${loggedUser.nama}`;
-        badge.classList.remove("hidden");
-        logoutBtn.classList.remove("hidden");
+        if (badge) {
+          badge.textContent = `Akun Aktif: ${loggedUser.nama}`;
+          badge.classList.remove("hidden");
+        }
+        if (logoutBtn) logoutBtn.classList.remove("hidden");
+        if (formsBox) formsBox.classList.add("hidden");
+        if (bannerBox) bannerBox.classList.remove("hidden");
+        if (detailEl) {
+          detailEl.textContent = loggedUser.email
+            ? `Akun: ${loggedUser.nama} • Email: ${loggedUser.email}`
+            : `Akun: ${loggedUser.nama}`;
+        }
         if (nameInput && !nameInput.value.trim()) {
           nameInput.value = loggedUser.nama;
         }
         if (loginName) loginName.value = loggedUser.nama;
       } else {
-        badge.classList.add("hidden");
-        logoutBtn.classList.add("hidden");
+        if (badge) badge.classList.add("hidden");
+        if (logoutBtn) logoutBtn.classList.add("hidden");
+        if (formsBox) formsBox.classList.remove("hidden");
+        if (bannerBox) bannerBox.classList.add("hidden");
+        if (detailEl) detailEl.textContent = "";
       }
     }
 
